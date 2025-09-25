@@ -1,13 +1,3 @@
-from sqlalchemy import Column, String, Boolean, DateTime, JSON, Integer, BigInteger, TIMESTAMP, Enum, ForeignKey, Date
-from sqlalchemy.orm import relationship, declarative_base
-from sqlalchemy.sql import func
-from datetime import datetime
-import enum
-
-Base = declarative_base()
-
-
-
 import enum
 from datetime import datetime, date
 from sqlalchemy import (
@@ -15,7 +5,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column, declarative_base
 
+import secrets
+import string
+
 Base = declarative_base()
+
+def generate_child_code(length: int = 6) -> str:
+    alphabet = string.ascii_uppercase + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 # --- Enums ---
 class UserRole(enum.Enum):
@@ -47,14 +44,20 @@ class User(Base):
 class Child(Base):
     __tablename__ = "children"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    full_name: Mapped[str] = mapped_column(String(255))
-    birth_date: Mapped[date] = mapped_column(Date)
+    code: Mapped[str] = mapped_column(String(12), primary_key=True, unique=True, nullable=False)
+    full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     parent_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     parent: Mapped["User"] = relationship("User", back_populates="children")
     reports: Mapped[list["Report"]] = relationship("Report", back_populates="child")
+
+    def __init__(self, **kwargs):
+        if "code" not in kwargs:
+            kwargs["code"] = generate_child_code()
+        super().__init__(**kwargs)
+
 
 
 class Report(Base):

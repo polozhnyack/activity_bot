@@ -13,7 +13,7 @@ from middlewares.session import DbSessionMiddleware
 # from middlewares.logging import UpdateLoggerMiddleware
 
 from dialogs.main_menu.dialog import start_menu
-from dialogs.main_menu.handlers import router
+from dialogs.main.handlers import router
 from dialogs.materials.dialog import materials
 from dialogs.materials.handlers import router as answer_router
 from dialogs.catalog.dialog import shop
@@ -43,7 +43,6 @@ async def main():
     dp = Dispatcher()
 
     dp.update.middleware(DbSessionMiddleware(session_pool = sessionmaker))
-    dp.update.outer_middleware(UpdateLoggerMiddleware())
 
 
     dp.callback_query.middleware(CallbackAnswerMiddleware())
