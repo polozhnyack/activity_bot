@@ -5,14 +5,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column, declarative_base
 
-import secrets
-import string
+from utils import generate_child_code
 
 Base = declarative_base()
-
-def generate_child_code(length: int = 6) -> str:
-    alphabet = string.ascii_uppercase + string.digits
-    return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 # --- Enums ---
 class UserRole(enum.Enum):
@@ -57,7 +52,6 @@ class Child(Base):
         if "code" not in kwargs:
             kwargs["code"] = generate_child_code()
         super().__init__(**kwargs)
-
 
 
 class Report(Base):

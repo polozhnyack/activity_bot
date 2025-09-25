@@ -11,10 +11,14 @@ from config import load_config
 config = load_config()
 
 
-main_menu = Dialog(
+main = Dialog(
     Window(
         Const("Введите уникальный код вашего ребенка."),
         state=MainMenu.start_user
+    ),
+    Window(
+        Format(""),
+        state=MainMenu.user_menu
     ),
 )
 

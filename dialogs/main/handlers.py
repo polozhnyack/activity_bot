@@ -35,4 +35,4 @@ async def command_start_process(message: Message, dialog_manager: DialogManager,
     await state.clear()
 
     await dialog_manager.reset_stack()
-    await dialog_manager.start(state=MainMenu.start_menu, mode=StartMode.RESET_STACK)
+    await dialog_manager.start(state=MainMenu.start_user, mode=StartMode.RESET_STACK)

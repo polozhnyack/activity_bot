@@ -15,6 +15,14 @@ class UserService:
     session: AsyncSession
 
     async def create_user(self, user_id: int, full_name: str, role: UserRole) -> User:
+        result = await self.session.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
+
+        if user:
+            return user
+
         user = User(telegram_id=user_id, full_name=full_name, role=role)
         self.session.add(user)
         await self.session.commit()
