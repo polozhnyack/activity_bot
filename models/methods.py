@@ -30,7 +30,6 @@ class UserService:
         await self.session.refresh(user)
         return user
     
-
     async def attach_to_parent(self, parent_id: int, child_code: str) -> bool:
         result = await self.session.execute(
             select(Child).where(Child.code == child_code)
@@ -73,3 +72,57 @@ class ChildService:
                     await self.session.rollback()
                     continue
                 return child
+            
+
+
+@dataclass
+class ReportService:
+    session: AsyncSession
+
+    async def create_report_photo(
+        self,
+        child_code: str,
+        photo_file_ids: list[str],
+        exercise_ids: list[int] | None = None
+    ):
+        month_str = datetime.now().strftime("%Y-%m")
+        report = Report(
+            child_id=child_code,
+            month=month_str,
+            status=ReportStatus.draft,
+        )
+        self.session.add(report)
+        await self.session.flush()
+
+        photos = []
+        for idx, file_id in enumerate(photo_file_ids):
+            exercise_id = exercise_ids[idx] if exercise_ids else None
+            photo = Photo(
+                report_id=report.id,
+                file_id=file_id,
+                exercise_id=exercise_id,
+            )
+            photos.append(photo)
+
+        self.session.add_all(photos)
+
+        await self.session.commit()
+        await self.session.refresh(report)
+        return report
+
+
+@dataclass
+class ExerciseService:
+    session: AsyncSession
+
+    async def get_all(self) -> list["Exercise"]:
+        result = await self.session.execute(select(Exercise))
+        return result.scalars().all()
+    
+    
+    async def get_exercise_name_by_id(self, exercise_id: int) -> str | None:
+        result = await self.session.execute(
+            select(Exercise.name).where(Exercise.id == exercise_id)
+        )
+        exercise_name = result.scalar_one_or_none()
+        return exercise_name

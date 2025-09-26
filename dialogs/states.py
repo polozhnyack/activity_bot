@@ -8,3 +8,6 @@ class ParentRegistration(StatesGroup):
 class ChildInfo(StatesGroup):
     start_info = State()
     select_month = State()
+    select_sports_item = State()
+    wait_photo = State()
+    

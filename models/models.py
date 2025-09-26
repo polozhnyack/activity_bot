@@ -31,7 +31,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, primary_key=True)
     full_name: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
     children: Mapped[list["Child"]] = relationship("Child", back_populates="parent")
     comments: Mapped[list["Comment"]] = relationship("Comment", back_populates="author")
@@ -44,7 +44,7 @@ class Child(Base):
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
     parent: Mapped["User"] = relationship("User", back_populates="children")
     reports: Mapped[list["Report"]] = relationship("Report", back_populates="child")
@@ -62,10 +62,10 @@ class Report(Base):
     child_id: Mapped[str] = mapped_column(ForeignKey("children.code"), nullable=False)
     month: Mapped[str] = mapped_column(String(7), nullable=False)  # формат "YYYY-MM"
     status: Mapped[ReportStatus] = mapped_column(Enum(ReportStatus), default=ReportStatus.draft)
-    trainer_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    trainer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=True)
     director_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     child: Mapped["Child"] = relationship("Child", back_populates="reports")
     photos: Mapped[list["Photo"]] = relationship("Photo", back_populates="report")
@@ -80,7 +80,7 @@ class Photo(Base):
     file_id: Mapped[str] = mapped_column(String(255), nullable=False)  # Telegram file_id
     exercise_id: Mapped[int] = mapped_column(ForeignKey("exercises.id"))
     uploaded_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
     report: Mapped["Report"] = relationship("Report", back_populates="photos")
     exercise: Mapped["Exercise"] = relationship("Exercise")
@@ -93,7 +93,7 @@ class Comment(Base):
     report_id: Mapped[int] = mapped_column(ForeignKey("reports.id"), nullable=False)
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
     report: Mapped["Report"] = relationship("Report", back_populates="comments")
     author: Mapped["User"] = relationship("User", back_populates="comments")

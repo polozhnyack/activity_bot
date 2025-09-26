@@ -5,7 +5,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery, LabeledPrice
 from aiogram.fsm.context import FSMContext
 
-from aiogram_dialog.widgets.kbd import Button
+from aiogram_dialog.widgets.kbd import Button, Select
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +32,11 @@ async def command_start_process(message: Message, dialog_manager: DialogManager,
 
     await dialog_manager.reset_stack()
     await dialog_manager.start(state=ParentRegistration.input_code, mode=StartMode.RESET_STACK)
+
+
+
+async def back_btn(callback: CallbackQuery, button: Button, dialog_manager: DialogManager):
+    await dialog_manager.back()
 
 
 async def child_code_handler(
@@ -66,3 +71,35 @@ async def child_code_handler(
     else:
         await message.answer("❌ Неверный код, попробуйте снова.")
         await manager.switch_to(ParentRegistration.input_code)
+
+
+
+
+async def month_selected(
+    callback: CallbackQuery,
+    widget: Select,
+    dialog_manager: DialogManager,
+    item_id: str,
+):
+    
+    logger.debug(f"Вы выбрали месяц: {item_id}")
+    await callback.answer(f"Вы выбрали месяц: {item_id}")
+    dialog_manager.dialog_data["selected_month"] = int(item_id)
+
+    logger.debug(dialog_manager.dialog_data)
+
+    await dialog_manager.switch_to(state=ChildInfo.select_sports_item)
+
+
+async def on_exercise_selected(
+    callback: CallbackQuery,
+    widget: Select,
+    dialog_manager: DialogManager,
+    item_id: str,  
+):
+    logger.debug(f"Вы выбрали упражнение: {item_id}")
+    dialog_manager.dialog_data["selected_exercise"] = int(item_id)
+
+    logger.debug(dialog_manager.dialog_data)
+
+    await dialog_manager.switch_to(state=ChildInfo.wait_photo)

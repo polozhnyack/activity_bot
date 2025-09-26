@@ -23,7 +23,7 @@ async def months_getter(dialog_manager, **kwargs):
     ]
     
     months.append({
-        "id": f"current_{current_month}",
+        "id": f"{current_month}",
         "name": f"🎯 {months_names[current_month-1]} (Текущий)"
     })
     
@@ -50,3 +50,27 @@ async def get_child_info(dialog_manager: DialogManager, **kwargs):
         "child_name": start_data.get("child_name", "Не найдено"),
         "child_birth_date": formatted_date,
     }
+
+
+async def get_exercise_btn(dialog_manager: DialogManager, **kwargs):
+    service: ExerciseService = dialog_manager.middleware_data["ExerciseService"]
+
+    exercises = await service.get_all()
+
+    return {
+        "exercises": [
+            {"id": ex.id, "name": ex.name}
+            for ex in exercises
+        ]
+    }
+
+
+async def get_exercise_text(dialog_manager: DialogManager, **kwargs):
+    service: ExerciseService = dialog_manager.middleware_data["ExerciseService"]
+
+    exercises_name = await service.get_exercise_name_by_id(dialog_manager.dialog_data["selected_exercise"])
+
+    return {
+        "element_name": exercises_name
+    }
+

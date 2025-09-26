@@ -38,8 +38,6 @@ async def main():
     dp = Dispatcher()
 
     dp.update.middleware(DbSessionMiddleware(session_pool = sessionmaker))
-
-
     dp.callback_query.middleware(CallbackAnswerMiddleware())
 
 
