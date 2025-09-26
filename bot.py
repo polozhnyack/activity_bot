@@ -9,16 +9,11 @@ from aiogram_dialog import setup_dialogs
 
 from logger import logger
 
-from middlewares.session import DbSessionMiddleware
-# from middlewares.logging import UpdateLoggerMiddleware
+from middleware.session import DbSessionMiddleware
 
-from dialogs.main_menu.dialog import start_menu
+
 from dialogs.main.handlers import router
-from dialogs.materials.dialog import materials
-from dialogs.materials.handlers import router as answer_router
-from dialogs.catalog.dialog import shop
-from dialogs.catalog.handlers import router as payment_router
-from dialogs.admin.dialog import admin as admin_panel
+from dialogs.main.dialog import parent_reg, child_info_dialog
 
 
 async def create_tables(url):
@@ -47,14 +42,11 @@ async def main():
 
     dp.callback_query.middleware(CallbackAnswerMiddleware())
 
-    dp.include_router(payment_router)
-    dp.include_router(router)
-    dp.include_router(answer_router)
 
-    dp.include_router(shop)
-    dp.include_router(materials)
-    dp.include_router(start_menu)
-    dp.include_router(admin_panel)
+    dp.include_router(router)
+    dp.include_router(parent_reg)
+
+    dp.include_router(child_info_dialog)
 
 
     setup_dialogs(dp)

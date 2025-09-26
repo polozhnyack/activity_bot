@@ -1,9 +1,10 @@
 import enum
 from datetime import datetime, date
 from sqlalchemy import (
-    Column, Integer, String, DateTime, ForeignKey, Enum, Date, Text
+    Column, Integer, String, DateTime, ForeignKey, Enum, Date, Text, BigInteger
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column, declarative_base
+from typing import Optional
 
 from utils import generate_child_code
 
@@ -27,7 +28,7 @@ class ReportStatus(enum.Enum):
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False, primary_key=True)
+    id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, primary_key=True)
     full_name: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -42,7 +43,7 @@ class Child(Base):
     code: Mapped[str] = mapped_column(String(12), primary_key=True, unique=True, nullable=False)
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    parent_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     parent: Mapped["User"] = relationship("User", back_populates="children")
@@ -58,7 +59,7 @@ class Report(Base):
     __tablename__ = "reports"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    child_id: Mapped[int] = mapped_column(ForeignKey("children.id"), nullable=False)
+    child_id: Mapped[str] = mapped_column(ForeignKey("children.code"), nullable=False)
     month: Mapped[str] = mapped_column(String(7), nullable=False)  # формат "YYYY-MM"
     status: Mapped[ReportStatus] = mapped_column(Enum(ReportStatus), default=ReportStatus.draft)
     trainer_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
@@ -77,11 +78,12 @@ class Photo(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     report_id: Mapped[int] = mapped_column(ForeignKey("reports.id"), nullable=False)
     file_id: Mapped[str] = mapped_column(String(255), nullable=False)  # Telegram file_id
-    exercise_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    exercise_id: Mapped[int] = mapped_column(ForeignKey("exercises.id"))
     uploaded_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     report: Mapped["Report"] = relationship("Report", back_populates="photos")
+    exercise: Mapped["Exercise"] = relationship("Exercise")
 
 
 class Comment(Base):
@@ -95,3 +97,9 @@ class Comment(Base):
 
     report: Mapped["Report"] = relationship("Report", back_populates="comments")
     author: Mapped["User"] = relationship("User", back_populates="comments")
+
+
+class Exercise(Base):
+    __tablename__ = "exercises"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True)
