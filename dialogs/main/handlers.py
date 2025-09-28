@@ -22,16 +22,25 @@ config = load_config()
 @router.message(CommandStart())
 async def command_start_process(message: Message, dialog_manager: DialogManager, state: FSMContext, UserService: UserService):
 
-    await UserService.create_user(
-        user_id = message.from_user.id, 
-        full_name=message.from_user.full_name,
-        role=UserRole.parent
-    )
-
     await state.clear()
-
     await dialog_manager.reset_stack()
-    await dialog_manager.start(state=ParentRegistration.input_code, mode=StartMode.RESET_STACK)
+    
+    user = await UserService.get_by_id(message.from_user.id)
+
+    if user:
+        if user.role == UserRole.trainer:
+            await dialog_manager.start(state=TrainerStates.trainer_menu)
+
+    else:
+        await UserService.create_user(
+            user_id = message.from_user.id, 
+            full_name=message.from_user.full_name,
+            role=UserRole.parent
+        )
+
+        await state.clear()
+        await dialog_manager.reset_stack()
+        await dialog_manager.start(state=ParentRegistration.input_code, mode=StartMode.RESET_STACK)
 
 
 

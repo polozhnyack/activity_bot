@@ -40,7 +40,7 @@ child_info_dialog=Dialog(
         getter=get_child_info
     ),
     Window(
-        Const("Выберите месяц"),
+        Const("📅 Выберите месяц:"),
         Group(
             Select(
                 Format("{item[name]}"),

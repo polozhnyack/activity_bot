@@ -15,6 +15,11 @@ from utils import generate_child_code
 class UserService:
     session: AsyncSession
 
+    async def get_by_id(self, user_id: int) -> User | None:
+        stmt = select(User).where(User.id == user_id)
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
     async def create_user(self, user_id: int, full_name: str, role: UserRole) -> User:
         result = await self.session.execute(
             select(User).where(User.id == user_id)
@@ -53,6 +58,10 @@ class UserService:
 @dataclass
 class ChildService:
     session: AsyncSession
+
+    async def get_all(self) -> list["Child"]:
+        result = await self.session.execute(select(Child))
+        return result.scalars().all()
 
     async def get_by_code(self, code: str) -> Optional["Child"]:
         result = await self.session.execute(select(Child).where(Child.code == code))
@@ -109,6 +118,30 @@ class ReportService:
         await self.session.commit()
         await self.session.refresh(report)
         return report
+    
+    async def get_reports_info(
+        self, child_code: str, month: str | None = None
+    ) -> dict:
+        if not month:
+            month = datetime.now().strftime("%Y-%m")
+
+        stmt = (
+            select(Report)
+            .where(Report.child_id == child_code)
+            .where(Report.month == month)
+            .order_by(Report.created_at.desc())
+        )
+        result = await self.session.execute(stmt)
+        reports: list[Report] = result.scalars().all()
+
+        last_report_date = (
+            reports[0].created_at.strftime("%d.%m.%Y") if reports else "—"
+        )
+
+        return {
+            "reports": reports,
+            "last_report_date": last_report_date,
+        }
 
 
 

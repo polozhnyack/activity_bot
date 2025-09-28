@@ -11,3 +11,8 @@ class ChildInfo(StatesGroup):
     select_sports_item = State()
     wait_photo = State()
     
+class TrainerStates(StatesGroup):
+    trainer_menu = State()
+    select_month = State()
+    select_child = State()
+    child_card = State()
