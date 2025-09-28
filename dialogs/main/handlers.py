@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dialogs.states import *
 
-from models.methods import UserService, ChildService
+from models.methods import UserService, ChildService, ReportService
 from models.models import *
 from config import load_config
 from logger import logger
@@ -103,3 +103,33 @@ async def on_exercise_selected(
     logger.debug(dialog_manager.dialog_data)
 
     await dialog_manager.switch_to(state=ChildInfo.wait_photo)
+
+
+async def on_photo_input(message: Message, _: MessageInput, manager: DialogManager):
+    if message.media_group_id:
+        await message.answer("⚠️ Пожалуйста, отправьте только одно фото.")
+        return
+    
+    photo = message.photo[-1]
+
+    service: ReportService = manager.middleware_data["ReportService"]
+
+    file_id = photo.file_id
+    exercise = manager.dialog_data["selected_exercise"]
+    month = manager.dialog_data["selected_month"]
+    child_code = manager.dialog_data["child_code"]
+
+    if exercise and month and child_code and file_id:
+        await service.create_report_photo(
+            user_id=message.from_user.id,
+            child_code=child_code,
+            photo_file_id=file_id,
+            exercise_id=exercise,
+            month=month
+        )
+
+        await message.answer(f"✅ Фото сохранено!")
+        await manager.done()
+
+    else: 
+        await message.answer(f"❌ <b>Произошла ошибка при сохранении фото!</b>\n\nПопробуйте повторить попытку позже.")

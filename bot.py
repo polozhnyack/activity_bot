@@ -40,7 +40,6 @@ async def main():
     dp.update.middleware(DbSessionMiddleware(session_pool = sessionmaker))
     dp.callback_query.middleware(CallbackAnswerMiddleware())
 
-
     dp.include_router(router)
     dp.include_router(parent_reg)
 

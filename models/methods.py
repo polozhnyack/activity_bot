@@ -81,11 +81,15 @@ class ReportService:
 
     async def create_report_photo(
         self,
+        user_id: int,
         child_code: str,
-        photo_file_ids: list[str],
-        exercise_ids: list[int] | None = None
+        photo_file_id: str,
+        exercise_id: int | None = None,
+        month: int | None = None
     ):
-        month_str = datetime.now().strftime("%Y-%m")
+        year = datetime.now().year
+        month_str = f"{year}-{month:02d}" if month else datetime.now().strftime("%Y-%m")
+
         report = Report(
             child_id=child_code,
             month=month_str,
@@ -94,21 +98,18 @@ class ReportService:
         self.session.add(report)
         await self.session.flush()
 
-        photos = []
-        for idx, file_id in enumerate(photo_file_ids):
-            exercise_id = exercise_ids[idx] if exercise_ids else None
-            photo = Photo(
-                report_id=report.id,
-                file_id=file_id,
-                exercise_id=exercise_id,
-            )
-            photos.append(photo)
-
-        self.session.add_all(photos)
+        photo = Photo(
+            report_id=report.id,
+            file_id=photo_file_id,
+            exercise_id=exercise_id,
+            uploaded_by=user_id
+        )
+        self.session.add(photo)
 
         await self.session.commit()
         await self.session.refresh(report)
         return report
+
 
 
 @dataclass

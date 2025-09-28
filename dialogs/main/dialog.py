@@ -75,10 +75,11 @@ child_info_dialog=Dialog(
         getter=get_exercise_btn
     ),
     Window(
-        Format("Выбранный элемент: <b>{element_name}</b>\n\nОтправьте фото для отчета."),
-        # MessageInput(
-        #     content_types=ContentType.PHOTO
-        # ),
+        Format("Элемент: <b>{element_name}</b>\n\nОтправьте фото для отчета."),
+        MessageInput(
+            on_photo_input,
+            content_types=ContentType.PHOTO
+        ),
         Button(
             text=Const("⬅️ Назад"),
             id="back",
