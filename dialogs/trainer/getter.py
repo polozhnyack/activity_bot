@@ -1,6 +1,8 @@
 from aiogram_dialog import DialogManager
 from models.methods import *
 from logger import logger
+from aiogram_dialog.api.entities import MediaAttachment, MediaId
+from aiogram.enums import ContentType
 
 
 async def months_getter(dialog_manager, **kwargs):
@@ -66,4 +68,27 @@ async def get_child_data(dialog_manager: DialogManager, **kwargs):
         "full_name": child.full_name,
         "birth_date": child.birth_date.strftime("%d.%m.%Y") if child.birth_date else "не указано",
         "code": child.code
+    }
+
+
+async def get_exercise_btn(dialog_manager: DialogManager, **kwargs):
+    service: ExerciseService = dialog_manager.middleware_data["ExerciseService"]
+
+    exercises = await service.get_all()
+
+    return {
+        "exercises": [
+            {"id": ex.id, "name": ex.name}
+            for ex in exercises
+        ]
+    }
+
+
+async def get_exercise_text(dialog_manager: DialogManager, **kwargs):
+    service: ExerciseService = dialog_manager.middleware_data["ExerciseService"]
+
+    exercises_name = await service.get_exercise_name_by_id(dialog_manager.dialog_data["selected_exercise"])
+
+    return {
+        "element_name": exercises_name
     }

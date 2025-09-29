@@ -1,7 +1,7 @@
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.kbd import Column, Button, Url, Row, Select, Group, PrevPage, NextPage, ScrollingGroup
-from aiogram_dialog.widgets.media import StaticMedia
+from aiogram_dialog.widgets.media import StaticMedia, MediaScroll, DynamicMedia
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram.types import ContentType
 
@@ -26,6 +26,7 @@ products_scroller = ScrollingGroup(
     hide_on_single_page=True,
     hide_pager=True,
 )
+
 
 trainer_dialog = Dialog(
     Window(
@@ -95,8 +96,8 @@ trainer_dialog = Dialog(
         ),
         Button(
             text=Const("📈 История прогресса"),
-            id="progres_history"
-            
+            id="progres_history",
+            on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_sports_item)
         ),
         Button(
             text=Const("✅ Завершить месяц"),
@@ -109,5 +110,57 @@ trainer_dialog = Dialog(
         ),
         state=TrainerStates.child_card,
         getter=get_child_data
+    ),
+    Window(
+        Const("Выберите спортивный элемент"),
+        Group(
+            Select(
+                Format("{item[name]}"),
+                id="exercise_select",
+                items="exercises",
+                item_id_getter=lambda x: x["id"],
+                on_click=on_exercise_selected,
+            ),
+            width=1
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back_menu",
+            on_click=lambda c, b, m: m.back()
+        ),
+        state=TrainerStates.select_sports_item,
+        getter=get_exercise_btn
+    ),
+    Window(
+        Format("{text}"),
+        DynamicMedia("photo"),
+        Row(
+            Button(text=Const("◀️"), id="prev", on_click=prev_history),
+            Button(text=Const("▶️"), id="next", on_click=next_history),
+        ),
+        Button(
+            text=Const("✏️ Добавить комментарий"),
+            id="add_comment",
+            # on_click=on_add_comment,
+            when=lambda data, widget, manager: not data.get("has_comment")
+        ),
+        Button(
+            text=Const("📝 Изменить комментарий"),
+            id="edit_comment",
+            # on_click=on_edit_comment,
+            when=lambda data, widget, manager: data.get("has_comment"),
+        ),
+        Button(
+            text=Const("🗑️ Удалить запись"),
+            id="delete_report",
+            # on_click=on_delete_report,
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back_menu",
+            on_click=lambda c, b, m: m.back()
+        ),
+        state=TrainerStates.history_progress,
+        getter=get_current_history_item
     )
 )

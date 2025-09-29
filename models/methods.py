@@ -2,7 +2,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from dataclasses import dataclass
 from datetime import datetime, date, timedelta, timezone
 from sqlalchemy.future import select
-from sqlalchemy import case, update, delete, select
+from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy import case, update, delete, select, exists
 from sqlalchemy.exc import IntegrityError
 
 from typing import List, Union, Optional
@@ -142,6 +143,35 @@ class ReportService:
             "reports": reports,
             "last_report_date": last_report_date,
         }
+    
+
+    async def get_reports_by_child_and_month(
+        self,
+        child_id: str,
+        month: str,
+        exercise_id: int | None = None
+    ) -> list[Report]:
+        stmt = (
+            select(Report)
+            .where(Report.child_id == child_id, Report.month == month)
+            .options(
+                selectinload(Report.photos),
+                selectinload(Report.comments).joinedload(Comment.author),
+                joinedload(Report.child),
+            )
+        )
+
+        if exercise_id is not None:
+            stmt = stmt.where(
+                exists().where(
+                    (Photo.report_id == Report.id) &
+                    (Photo.exercise_id == exercise_id)
+                )
+            )
+
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
 
 
 

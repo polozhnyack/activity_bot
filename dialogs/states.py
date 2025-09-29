@@ -16,3 +16,5 @@ class TrainerStates(StatesGroup):
     select_month = State()
     select_child = State()
     child_card = State()
+    select_sports_item = State()
+    history_progress = State()
