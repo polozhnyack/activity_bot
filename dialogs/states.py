@@ -18,3 +18,7 @@ class TrainerStates(StatesGroup):
     child_card = State()
     select_sports_item = State()
     history_progress = State()
+    add_comment = State()
+
+    select_sport_item_for_add_report = State()
+    add_report = State()

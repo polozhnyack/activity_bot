@@ -4,11 +4,10 @@ from aiogram.types import Message, CallbackQuery
 from aiogram_dialog.api.entities.media import MediaAttachment, MediaId
 from aiogram.types import ContentType
 
-from aiogram_dialog.widgets.kbd import Button, Select
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram_dialog.widgets.kbd import Select
 
 from dialogs.states import *
+from aiogram_dialog.widgets.input import MessageInput
 
 from models.methods import UserService, ChildService, ReportService
 from models.models import *
@@ -22,7 +21,7 @@ async def month_selected(
     dialog_manager: DialogManager,
     item_id: str,
 ):
-    
+    logger.debug(f"ID кнопки: {widget.widget_id}")
     logger.debug(f"Вы выбрали месяц: {item_id}")
     await callback.answer(f"Вы выбрали месяц: {item_id}")
     dialog_manager.dialog_data["selected_month"] = int(item_id)
@@ -60,16 +59,17 @@ async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
 
     report: Report = item["text"]
 
-    logger.debug(media)
+    dialog_manager.dialog_data["selected_report"] = int(report.id)
 
     text = (
         f"Месяц - {report.month}\n"
         f"Загружено: - {report.created_at}\n"
         f"Последнее обновление - {report.updated_at}\n\n"
         f"<b>Комментарий:</b>\n\n"
-        f"{report.comments or 'Нет комментариев'}"
-
+        f"{report.comments[-1].text if report.comments else "Нет комментариев"}"
     )
+
+    logger.debug(text)
 
     return {
         "has_comment": bool(report.comments),
@@ -108,14 +108,71 @@ async def on_exercise_selected(
 ):
     exercise_id = int(item_id)
     dialog_manager.dialog_data["selected_exercise"] = exercise_id
-
-    report_service: ReportService = dialog_manager.middleware_data["ReportService"]
-
     child_code = dialog_manager.dialog_data.get("child_code")
     selected_month = dialog_manager.dialog_data.get("selected_month")
 
     year = datetime.now().year
     month_str = f"{year}-{selected_month:02d}" 
+
+    if widget.widget_id == "exercise_select":
+        report_service: ReportService = dialog_manager.middleware_data["ReportService"]
+
+        reports: list[Report] = await report_service.get_reports_by_child_and_month(
+            child_id=child_code,
+            month=month_str,
+            exercise_id=exercise_id,
+        )
+
+        reports.sort(key=lambda r: r.created_at)
+        logger.debug(reports)
+
+        history_items = []
+        for report in reports:
+            for photo in report.photos:
+                history_items.append({
+                    "photo_file_id": photo.file_id,
+                    "text": report
+                })
+
+        logger.debug(history_items)
+
+        dialog_manager.dialog_data["history_items"] = history_items
+        dialog_manager.dialog_data["history_index"] = 0
+
+        await dialog_manager.switch_to(state=TrainerStates.history_progress)
+
+    elif widget.widget_id == "select_sport_item_for_add_report":
+        await dialog_manager.switch_to(state=TrainerStates.add_report)
+
+
+
+
+
+async def on_add_comment(message: Message, _: MessageInput, manager: DialogManager):
+    if not message.text:
+        await message.answer("⚠️ Пожалуйста, отправьте только текст")
+        return
+    
+    report_id: Report = manager.dialog_data.get("selected_report")
+    if not report_id:
+        await message.answer("❌ Ошибка: отчет не выбран")
+        return
+
+    report_service: ReportService = manager.middleware_data["ReportService"]
+
+    await report_service.add_comment(
+        report_id=report_id,
+        author_id=message.from_user.id,
+        text=message.text.strip(),
+    )
+
+    child_code = manager.dialog_data.get("child_code")
+    selected_month = manager.dialog_data.get("selected_month")
+    exercise_id = manager.dialog_data["selected_exercise"]
+
+    year = datetime.now().year
+    month_str = f"{year}-{selected_month:02d}" 
+
 
     reports: list[Report] = await report_service.get_reports_by_child_and_month(
         child_id=child_code,
@@ -123,21 +180,100 @@ async def on_exercise_selected(
         exercise_id=exercise_id,
     )
 
-    # reports.sort(key=lambda r: r.created_at)
-    logger.debug(reports)
+    reports.sort(key=lambda r: r.created_at)
 
-    history_items = []
+    new_history_items = []
     for report in reports:
         for photo in report.photos:
-            history_items.append({
+            new_history_items.append({
                 "photo_file_id": photo.file_id,
-                # "text": f"Месяц: — {report.month}\n\nКомментарий: {report.comments if report.comments else "Нет комментариев"}"
                 "text": report
             })
 
-    logger.debug(history_items)
+    old_history_items = manager.dialog_data.get("history_items", [])
 
-    dialog_manager.dialog_data["history_items"] = history_items
+    if old_history_items != new_history_items:
+        logger.debug("history_items обновлен!")
+        manager.dialog_data["history_items"] = new_history_items
+
+    manager.dialog_data["history_index"] = manager.dialog_data["history_index"]
+
+    if new_history_items:
+        current_item = new_history_items[manager.dialog_data["history_index"]]
+        report: Report = current_item["text"]
+        logger.debug(
+            f"Текущий report после обновления: "
+            f"ID={report.id}, "
+            f"comments={[c.text for c in report.comments]}, "
+            f"updated_at={report.updated_at}"
+        )
+
+    await message.answer("✅ Комментарий добавлен")
+    await manager.switch_to(state=TrainerStates.history_progress)
+
+
+
+async def on_delete_report(event, widget, dialog_manager: DialogManager, **kwargs):
+    report_service: ReportService = dialog_manager.middleware_data["ReportService"]
+
+    selected_month = dialog_manager.dialog_data.get("selected_month")
+    year = datetime.now().year
+    month_str = f"{year}-{selected_month:02d}" 
+
+    await report_service.delete_report(
+        child_id=dialog_manager.dialog_data.get("child_code"),
+        month=month_str,
+        report_id=dialog_manager.dialog_data.get("selected_report")
+    )
+
+    child_code = dialog_manager.dialog_data.get("child_code")
+    exercise_id = dialog_manager.dialog_data.get("selected_exercise")
+    
+    reports: list[Report] = await report_service.get_reports_by_child_and_month(
+        child_id=child_code,
+        month=month_str,
+        exercise_id=exercise_id,
+    )
+
+    new_history_items = [
+        {"photo_file_id": photo.file_id, "text": report}
+        for report in reports
+        for photo in report.photos
+    ]
+    
+    dialog_manager.dialog_data["history_items"] = new_history_items
     dialog_manager.dialog_data["history_index"] = 0
 
-    await dialog_manager.switch_to(state=TrainerStates.history_progress)
+    await dialog_manager.update(data=dialog_manager.dialog_data)
+
+
+async def select_sport_item_for_add_report(
+    message: Message,
+    _: MessageInput,
+    manager: DialogManager
+):
+    if not message.photo:
+        await message.answer("❌ Пожалуйста, отправьте именно фото.")
+        return
+
+    report_service: ReportService = manager.middleware_data["ReportService"]
+
+    photo = message.photo[-1]
+    file_id = photo.file_id
+    caption = message.caption or None
+    selected_month = manager.dialog_data.get("selected_month")
+
+
+    logger.debug(f"Получено фото: {file_id}, подпись: {caption}")
+
+    await report_service.create_report_photo(
+        user_id=message.from_user.id,
+        child_code=manager.dialog_data.get("child_code"),
+        photo_file_id=file_id,
+        exercise_id=manager.dialog_data["selected_exercise"],
+        month=selected_month,
+        comment_text=caption
+    )
+
+    await message.answer("✅ Отчет добавлен.")
+    await manager.switch_to(state=TrainerStates.child_card)

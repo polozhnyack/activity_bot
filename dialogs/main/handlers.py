@@ -27,11 +27,11 @@ async def command_start_process(message: Message, dialog_manager: DialogManager,
     
     user = await UserService.get_by_id(message.from_user.id)
 
-    if user:
+    if user.role != UserRole.parent:
         if user.role == UserRole.trainer:
             await dialog_manager.start(state=TrainerStates.trainer_menu)
 
-    else:
+    elif user.role == UserRole.parent:
         await UserService.create_user(
             user_id = message.from_user.id, 
             full_name=message.from_user.full_name,

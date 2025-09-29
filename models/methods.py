@@ -95,7 +95,8 @@ class ReportService:
         child_code: str,
         photo_file_id: str,
         exercise_id: int | None = None,
-        month: int | None = None
+        month: int | None = None,
+        comment_text: str | None = None  # новый параметр для комментария
     ):
         year = datetime.now().year
         month_str = f"{year}-{month:02d}" if month else datetime.now().strftime("%Y-%m")
@@ -116,9 +117,18 @@ class ReportService:
         )
         self.session.add(photo)
 
+        if comment_text:
+            comment = Comment(
+                report_id=report.id,
+                author_id=user_id,
+                text=comment_text
+            )
+            self.session.add(comment)
+
         await self.session.commit()
         await self.session.refresh(report)
         return report
+
     
     async def get_reports_info(
         self, child_code: str, month: str | None = None
@@ -170,7 +180,73 @@ class ReportService:
             )
 
         result = await self.session.execute(stmt)
-        return result.scalars().all()
+        reports = result.scalars().all()
+
+        for r in reports:
+            await self.session.refresh(r, attribute_names=["comments", "photos"])
+
+        return reports
+    
+
+    async def add_comment(self, report_id: int, author_id: int, text: str) -> Comment:
+        result = await self.session.execute(
+            select(Report)
+            .where(Report.id == report_id)
+            .options(selectinload(Report.comments))
+        )
+        report = result.scalar_one_or_none()
+        if not report:
+            raise ValueError(f"Report {report_id} not found")
+
+        for old_comment in report.comments:
+            await self.session.delete(old_comment)
+
+        comment = Comment(
+            report_id=report_id,
+            author_id=author_id,
+            text=text,
+            created_at=datetime.now()
+        )
+
+        self.session.add(comment)
+        await self.session.commit()
+        await self.session.refresh(comment)
+
+        return comment
+    
+
+    async def delete_report(self, child_id: str, month: str, report_id: int) -> bool:
+        """
+        Удаляет отчет по child_id, month и report_id.
+        Возвращает True, если отчет был найден и удален, False иначе.
+        """
+        result = await self.session.execute(
+            select(Report)
+            .where(
+                Report.id == report_id,
+                Report.child_id == child_id,
+                Report.month == month
+            )
+            .options(
+                selectinload(Report.photos),
+                selectinload(Report.comments)
+            )
+        )
+        report = result.scalar_one_or_none()
+        if not report:
+            return False
+
+        for photo in report.photos:
+            await self.session.delete(photo)
+        for comment in report.comments:
+            await self.session.delete(comment)
+
+        await self.session.delete(report)
+        await self.session.commit()
+
+        return True
+
+
 
 
 

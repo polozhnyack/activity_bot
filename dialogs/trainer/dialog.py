@@ -95,6 +95,11 @@ trainer_dialog = Dialog(
             "📌 Последняя запись: {last_report_date}"
         ),
         Button(
+            text=Const("➕ Добавить запись"),
+            id="trainer_add_report",
+            on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_sport_item_for_add_report)
+        ),
+        Button(
             text=Const("📈 История прогресса"),
             id="progres_history",
             on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_sports_item)
@@ -132,28 +137,60 @@ trainer_dialog = Dialog(
         getter=get_exercise_btn
     ),
     Window(
+        Const("Выберите спортивный элемент"),
+        Group(
+            Select(
+                Format("{item[name]}"),
+                id="select_sport_item_for_add_report",
+                items="exercises",
+                item_id_getter=lambda x: x["id"],
+                on_click=on_exercise_selected,
+            ),
+            width=1
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back_menu",
+            on_click=lambda c, b, m: m.back()
+        ),
+        state=TrainerStates.select_sport_item_for_add_report,
+        getter=get_exercise_btn
+    ),
+    Window(
+        Const(
+            "📸 <b>Пожалуйста, отправьте фото — с подписью или без неё</b>\n\n"
+            "Вы можете добавить комментарий к фото позже, если захотите."
+        ),
+        MessageInput(
+            select_sport_item_for_add_report,
+            content_types=ContentType.PHOTO
+        ),
+        state=TrainerStates.add_report
+    ),
+    Window(
         Format("{text}"),
         DynamicMedia("photo"),
         Row(
-            Button(text=Const("◀️"), id="prev", on_click=prev_history),
-            Button(text=Const("▶️"), id="next", on_click=next_history),
+            Button(text=Const("◀️"), id="prev", on_click=prev_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
+            Button(text=Const("▶️"), id="next", on_click=next_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
         ),
         Button(
             text=Const("✏️ Добавить комментарий"),
             id="add_comment",
-            # on_click=on_add_comment,
-            when=lambda data, widget, manager: not data.get("has_comment")
+            on_click=lambda c, b, m: m.switch_to(state=TrainerStates.add_comment),
+            when=lambda data, widget, manager: data.get("text") != "Нет данных" and not data.get("has_comment")
         ),
         Button(
             text=Const("📝 Изменить комментарий"),
             id="edit_comment",
-            # on_click=on_edit_comment,
-            when=lambda data, widget, manager: data.get("has_comment"),
+            on_click=lambda c, b, m: m.switch_to(state=TrainerStates.add_comment),
+            when=lambda data, widget, manager: data.get("text") != "Нет данных" and data.get("has_comment"),
         ),
         Button(
             text=Const("🗑️ Удалить запись"),
             id="delete_report",
-            # on_click=on_delete_report,
+            on_click=on_delete_report,
+            when=lambda data, widget, manager: data.get("text") != "Нет данных"
         ),
         Button(
             text=Const("⬅️ Назад"),
@@ -162,5 +199,21 @@ trainer_dialog = Dialog(
         ),
         state=TrainerStates.history_progress,
         getter=get_current_history_item
+    ),
+    Window(
+        Const(
+            "✍️ Отправьте текст комментария.\n\n"
+            "➡️ Просто напишите сообщение ниже, и оно сохранится к отчёту."
+          ),
+        MessageInput(
+            on_add_comment,
+            content_types=ContentType.TEXT
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back_menu",
+            on_click=lambda c, b, m: m.back()
+        ),
+        state=TrainerStates.add_comment
     )
 )
