@@ -22,3 +22,5 @@ class TrainerStates(StatesGroup):
 
     select_sport_item_for_add_report = State()
     add_report = State()
+
+    confidence_window = State()

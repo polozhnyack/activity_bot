@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, date, timedelta, timezone
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload, joinedload
-from sqlalchemy import case, update, delete, select, exists
+from sqlalchemy import case, update, delete, select, exists, func
 from sqlalchemy.exc import IntegrityError
 
 from typing import List, Union, Optional
@@ -20,6 +20,12 @@ class UserService:
         stmt = select(User).where(User.id == user_id)
         result = await self.session.execute(stmt)
         return result.scalars().first()
+    
+    async def get_child_by_parent_id(self, parent_id: int) -> Child | None:
+        result = await self.session.execute(
+            select(Child).where(Child.parent_id == parent_id)
+        )
+        return result.scalar_one_or_none()
 
     async def create_user(self, user_id: int, full_name: str, role: UserRole) -> User:
         result = await self.session.execute(
@@ -94,6 +100,7 @@ class ReportService:
         user_id: int,
         child_code: str,
         photo_file_id: str,
+        trainer_id: int | None = None,
         exercise_id: int | None = None,
         month: int | None = None,
         comment_text: str | None = None  # новый параметр для комментария
@@ -105,6 +112,7 @@ class ReportService:
             child_id=child_code,
             month=month_str,
             status=ReportStatus.draft,
+            trainer_id=trainer_id
         )
         self.session.add(report)
         await self.session.flush()
@@ -159,7 +167,8 @@ class ReportService:
         self,
         child_id: str,
         month: str,
-        exercise_id: int | None = None
+        exercise_id: int | None = None,
+        status: ReportStatus | None = None
     ) -> list[Report]:
         stmt = (
             select(Report)
@@ -178,6 +187,9 @@ class ReportService:
                     (Photo.exercise_id == exercise_id)
                 )
             )
+
+        if status is not None:
+            stmt = stmt.where(Report.status == status)
 
         result = await self.session.execute(stmt)
         reports = result.scalars().all()
@@ -245,6 +257,49 @@ class ReportService:
         await self.session.commit()
 
         return True
+    
+
+    async def send_reports_to_review(
+        self,
+        child_id: str,
+        month: str,
+        trainer_id: int,
+    ) -> bool:
+        # Проверяем, есть ли отчёты
+        result = await self.session.execute(
+            select(func.count()).select_from(Report).where(
+                Report.child_id == child_id,
+                Report.month == month,
+                Report.status == ReportStatus.draft
+            )
+        )
+        count = result.scalar_one()
+
+        if count == 0:
+            return False
+
+        await self.session.execute(
+            update(Report)
+            .where(Report.child_id == child_id, Report.month == month)
+            .values(status=ReportStatus.in_review)
+            .execution_options(synchronize_session="fetch")
+        )
+
+        await self.session.execute(
+            update(Report)
+            .where(
+                Report.child_id == child_id,
+                Report.month == month,
+                Report.trainer_id.is_(None)
+            )
+            .values(trainer_id=trainer_id)
+            .execution_options(synchronize_session="fetch")
+        )
+
+        await self.session.commit()
+        return True
+
+
 
 
 

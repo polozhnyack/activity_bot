@@ -30,16 +30,28 @@ async def command_start_process(message: Message, dialog_manager: DialogManager,
     if user.role != UserRole.parent:
         if user.role == UserRole.trainer:
             await dialog_manager.start(state=TrainerStates.trainer_menu)
+        if user.role == UserRole.director:
+            await dialog_manager.start(start=DirectorState.director_menu)
 
     elif user.role == UserRole.parent:
+        child = await UserService.get_child_by_parent_id(
+            parent_id=message.from_user.id
+        )
+        await dialog_manager.start(
+            state=ChildInfo.start_info,
+            data={
+                "parent_id": message.from_user.id,
+                "child_code": child.code,
+                "child_name": child.full_name,
+                "child_birth_date": child.birth_date,
+            }
+        )
+    else:
         await UserService.create_user(
             user_id = message.from_user.id, 
             full_name=message.from_user.full_name,
             role=UserRole.parent
         )
-
-        await state.clear()
-        await dialog_manager.reset_stack()
         await dialog_manager.start(state=ParentRegistration.input_code, mode=StartMode.RESET_STACK)
 
 

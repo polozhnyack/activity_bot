@@ -106,7 +106,8 @@ trainer_dialog = Dialog(
         ),
         Button(
             text=Const("✅ Завершить месяц"),
-            id="complete_month"
+            id="complete_month",
+            on_click=lambda c, b, m: m.switch_to(state=TrainerStates.confidence_window)
         ),
         Button(
             text=Const("⬅️ Назад"),
@@ -195,7 +196,7 @@ trainer_dialog = Dialog(
         Button(
             text=Const("⬅️ Назад"),
             id="back_menu",
-            on_click=lambda c, b, m: m.back()
+            on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_sport_item_for_add_report)
         ),
         state=TrainerStates.history_progress,
         getter=get_current_history_item
@@ -215,5 +216,24 @@ trainer_dialog = Dialog(
             on_click=lambda c, b, m: m.back()
         ),
         state=TrainerStates.add_comment
-    )
+    ),
+    Window(
+        Const("⚠️ <b>Подтверждение действия</b>\n\n"
+          "Вы уверены, что хотите <b>закрыть месяц</b> "
+          "и 📤 отправить отчет на проверку?\n\n"
+        ),
+        Row(
+            Button(
+                Const("✅ Да"),
+                id="confirm_yes",
+                on_click=on_confirm_close
+            ),
+            Button(
+                Const("❌ Нет"),
+                id="confirm_no",
+                on_click=lambda c, b, m: m.switch_to(state=TrainerStates.child_card)
+                ),
+        ),
+        state=TrainerStates.confidence_window
+    ),
 )

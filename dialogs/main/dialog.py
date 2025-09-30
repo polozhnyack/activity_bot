@@ -15,7 +15,8 @@ config = load_config()
 
 parent_reg = Dialog(
     Window(
-        Const("Введите уникальный код вашего ребенка."),
+        Const("🔑 Введите уникальный код вашего ребёнка, "
+              "чтобы мы смогли найти его в системе."),
         MessageInput(
             child_code_handler,
             content_types=ContentType.TEXT
@@ -28,11 +29,11 @@ parent_reg = Dialog(
 child_info_dialog=Dialog(
     Window(
         Format(
-            "ФИО: {child_name}\n"
-            "Дата рождения: {child_birth_date}"
+            "👤 <b>ФИО:</b> {child_name}\n"
+            "🎂 <b>Дата рождения:</b> {child_birth_date}"
         ),
         Button(
-            text=Const("Загрузить фото"),
+            text=Const("📸 Загрузить фото"),
             id="send_data",
             on_click=lambda c, b, m: m.switch_to(state=ChildInfo.select_month)
         ),
@@ -40,7 +41,7 @@ child_info_dialog=Dialog(
         getter=get_child_info
     ),
     Window(
-        Const("📅 Выберите месяц:"),
+        Const("📅 Выберите месяц для формирования отчёта:"),
         Group(
             Select(
                 Format("{item[name]}"),
@@ -55,7 +56,7 @@ child_info_dialog=Dialog(
         getter=months_getter
     ),
     Window(
-        Const("Выберите спортивный элемент"),
+        Const("🏋️ Выберите спортивный элемент, по которому хотите загрузить фото:"),
         Group(
             Select(
                 Format("{item[name]}"),
@@ -75,7 +76,8 @@ child_info_dialog=Dialog(
         getter=get_exercise_btn
     ),
     Window(
-        Format("Элемент: <b>{element_name}</b>\n\nОтправьте фото для отчета."),
+        Format("📌 Вы выбрали элемент: <b>{element_name}</b>\n\n"
+               "📷 Отправьте фото для добавления в отчёт."),
         MessageInput(
             on_photo_input,
             content_types=ContentType.PHOTO

@@ -48,7 +48,7 @@ async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
     index = dialog_manager.dialog_data.get("history_index", 0)
 
     if not items:
-        return {"text": "Нет данных", "photo": None}  # лучше ключ "photo" для согласованности с Media widgets
+        return {"text": "Нет данных", "photo": None}
 
     item = items[index]
 
@@ -121,6 +121,7 @@ async def on_exercise_selected(
             child_id=child_code,
             month=month_str,
             exercise_id=exercise_id,
+            status=ReportStatus.draft
         )
 
         reports.sort(key=lambda r: r.created_at)
@@ -178,6 +179,7 @@ async def on_add_comment(message: Message, _: MessageInput, manager: DialogManag
         child_id=child_code,
         month=month_str,
         exercise_id=exercise_id,
+        status=ReportStatus.draft
     )
 
     reports.sort(key=lambda r: r.created_at)
@@ -233,6 +235,7 @@ async def on_delete_report(event, widget, dialog_manager: DialogManager, **kwarg
         child_id=child_code,
         month=month_str,
         exercise_id=exercise_id,
+        status=ReportStatus.draft
     )
 
     new_history_items = [
@@ -271,9 +274,33 @@ async def select_sport_item_for_add_report(
         child_code=manager.dialog_data.get("child_code"),
         photo_file_id=file_id,
         exercise_id=manager.dialog_data["selected_exercise"],
+        trainer_id=message.from_user.id,
         month=selected_month,
         comment_text=caption
     )
 
     await message.answer("✅ Отчет добавлен.")
     await manager.switch_to(state=TrainerStates.child_card)
+
+
+async def on_confirm_close(callback: CallbackQuery, button, dialog_manager: DialogManager):
+    
+    child_id = dialog_manager.dialog_data["child_code"]
+    month = dialog_manager.dialog_data["selected_month"]
+    trainer_id = callback.from_user.id
+
+    service: ReportService = dialog_manager.middleware_data["ReportService"]
+
+    year = datetime.now().year
+    month_str = f"{year}-{month:02d}" 
+
+    if await service.send_reports_to_review(
+        child_id=child_id,
+        trainer_id=trainer_id,
+        month=month_str
+    ):
+        await callback.answer("✅ Отчёты закрыты и отправлены на проверку.", show_alert=True)
+    else:
+        await callback.answer("❌ Отчетов за месяц не найдено.", show_alert=True)
+
+    await dialog_manager.switch_to(state=TrainerStates.select_month)
