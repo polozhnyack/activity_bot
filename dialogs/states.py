@@ -24,3 +24,13 @@ class TrainerStates(StatesGroup):
     add_report = State()
 
     confidence_window = State()
+
+
+class DirectorState(StatesGroup):
+    director_menu = State()
+    select_child = State()
+    select_month = State()
+
+    reports_child = State()
+    report = State()
+    report_list = State()

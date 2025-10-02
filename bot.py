@@ -15,6 +15,7 @@ from middleware.session import DbSessionMiddleware
 from dialogs.main.handlers import router
 from dialogs.main.dialog import parent_reg, child_info_dialog
 from dialogs.trainer.dialog import trainer_dialog
+from dialogs.director.dialog import director_dialog
 
 
 async def create_tables(url):
@@ -46,6 +47,7 @@ async def main():
 
     dp.include_router(child_info_dialog)
     dp.include_router(trainer_dialog)
+    dp.include_router(director_dialog)
 
     setup_dialogs(dp)
 

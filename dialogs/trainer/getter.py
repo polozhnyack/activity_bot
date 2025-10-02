@@ -45,6 +45,17 @@ async def get_childs_btn(dialog_manager: DialogManager, **kwargs):
         "childs": childs
     }
 
+async def get_childs_in_review_btn(dialog_manager: DialogManager, **kwargs):
+    service: ChildService = dialog_manager.middleware_data["ChildService"]
+
+    childs: list[Child] = await service.get_children_with_reports_in_review()
+    childs = [c for c in childs if c.full_name]
+
+    childs.sort(key=lambda c: c.full_name.lower())
+
+    return {
+        "childs": childs
+    }
 
 async def get_child_data(dialog_manager: DialogManager, **kwargs):
     service: ReportService = dialog_manager.middleware_data["ReportService"]

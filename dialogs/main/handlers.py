@@ -20,18 +20,33 @@ router = Router()
 config = load_config()
 
 @router.message(CommandStart())
-async def command_start_process(message: Message, dialog_manager: DialogManager, state: FSMContext, UserService: UserService):
-
+async def command_start_process(
+    message: Message,
+    dialog_manager: DialogManager,
+    state: FSMContext,
+    UserService: UserService,
+):
     await state.clear()
     await dialog_manager.reset_stack()
-    
+
     user = await UserService.get_by_id(message.from_user.id)
 
-    if user.role != UserRole.parent:
+    if not user:
+        user = await UserService.create_user(
+            user_id=message.from_user.id,
+            full_name=message.from_user.full_name,
+            role=UserRole.parent,
+        )
+        return await dialog_manager.start(
+            state=ParentRegistration.input_code,
+            mode=StartMode.RESET_STACK,
+        )
+
+    if user.role and user.role != UserRole.parent:
         if user.role == UserRole.trainer:
             await dialog_manager.start(state=TrainerStates.trainer_menu)
-        if user.role == UserRole.director:
-            await dialog_manager.start(start=DirectorState.director_menu)
+        elif user.role == UserRole.director:
+            await dialog_manager.start(state=DirectorState.director_menu)
 
     elif user.role == UserRole.parent:
         child = await UserService.get_child_by_parent_id(
@@ -44,15 +59,8 @@ async def command_start_process(message: Message, dialog_manager: DialogManager,
                 "child_code": child.code,
                 "child_name": child.full_name,
                 "child_birth_date": child.birth_date,
-            }
+            },
         )
-    else:
-        await UserService.create_user(
-            user_id = message.from_user.id, 
-            full_name=message.from_user.full_name,
-            role=UserRole.parent
-        )
-        await dialog_manager.start(state=ParentRegistration.input_code, mode=StartMode.RESET_STACK)
 
 
 

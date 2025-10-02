@@ -89,6 +89,17 @@ class ChildService:
                     continue
                 return child
             
+            
+    async def get_children_with_reports_in_review(self):
+        stmt = (
+            select(Child)
+            .join(Report, Report.child_id == Child.code)
+            .where(Report.status == ReportStatus.in_review)
+            .distinct()
+        )
+        result = await self.session.scalars(stmt)
+        return result.all()
+            
 
 
 @dataclass
@@ -298,6 +309,12 @@ class ReportService:
 
         await self.session.commit()
         return True
+    
+    
+    async def get_reports_in_review_count(self) -> int:
+        stmt = select(func.count()).select_from(Report).where(Report.status == ReportStatus.in_review)
+        result = await self.session.execute(stmt)
+        return result.scalar_one()
 
 
 
