@@ -61,7 +61,7 @@ trainer_dialog = Dialog(
         Button(
             text=Const("⬅️ Назад"),
             id="back_menu",
-            on_click=lambda c, b, m: m.back()
+            on_click=back_to
         ),
         state=TrainerStates.select_month,
         getter=months_getter

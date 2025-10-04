@@ -15,6 +15,21 @@ from config import load_config
 from logger import logger
 
 
+
+async def back_to(
+    callback: CallbackQuery,
+    button,
+    dialog_manager: DialogManager
+):
+    service: UserService = dialog_manager.middleware_data["UserService"]
+    user: User = await service.get_by_id(callback.from_user.id)
+
+
+    if user and user.role == UserRole.director:
+        await dialog_manager.start(state=DirectorState.director_menu)
+    else:
+        await dialog_manager.back()
+
 async def month_selected(
     callback: CallbackQuery,
     widget: Select,
@@ -54,7 +69,7 @@ async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
 
     media = MediaAttachment(
         type=ContentType.PHOTO,
-        file_id=MediaId(item["photo_file_id"])  # используем file_id Telegram
+        file_id=MediaId(item["photo_file_id"])
     )
 
     report: Report = item["text"]

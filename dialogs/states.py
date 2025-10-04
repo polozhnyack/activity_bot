@@ -34,3 +34,8 @@ class DirectorState(StatesGroup):
     reports_child = State()
     report = State()
     report_list = State()
+
+    select_elements_in_review = State()
+    report_review = State()
+    history_progress = State()
+    

@@ -1,6 +1,6 @@
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Const, Format
-from aiogram_dialog.widgets.kbd import Column, Button, Url, Row, Select, Group, PrevPage, NextPage, ScrollingGroup
+from aiogram_dialog.widgets.kbd import Column, Button, Url, Row, Select, Group, PrevPage, NextPage, ScrollingGroup, Radio
 from aiogram_dialog.widgets.media import StaticMedia, MediaScroll, DynamicMedia
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram.types import ContentType
@@ -9,7 +9,9 @@ from dialogs.states import DirectorState
 from .handlers import *
 from .getter import *
 from config import load_config
-from dialogs.trainer.getter import get_childs_btn, months_getter, get_childs_in_review_btn
+from dialogs.trainer.getter import get_childs_btn, months_getter, get_childs_in_review_btn, get_exercise_btn
+
+import operator
 
 config = load_config()
 
@@ -19,7 +21,7 @@ products_scroller = ScrollingGroup(
         id="child",
         item_id_getter=lambda p: f"code_{p.code}",
         items="childs",
-        on_click=child_selected
+        on_click=child_selected_card
     ),
     id="products_scroller",
     width=1,
@@ -28,8 +30,19 @@ products_scroller = ScrollingGroup(
     hide_pager=True,
 )
 
+months_select = Group(
+    Select(
+        Format("{item}"),
+        id="s_months",
+        item_id_getter=lambda x: x,
+        items="months",
+        on_click=on_month_selected
+    ),
+    width=4
+)
 
-products_scroller = ScrollingGroup(
+
+prod_scroller = ScrollingGroup(
     Select(
         Format("{item.full_name}"),
         id="child",
@@ -58,7 +71,7 @@ director_dialog = Dialog(
         Button(
             text=Const("📊 Текущие данные"), 
             id="start", 
-            on_click=lambda c, b, m: m.switch_to(state=DirectorState.select_child)
+            on_click=lambda c, b, m: m.start(state=TrainerStates.select_month)
         ),
         Button(
             text=Format("📝 Ждут проверки: {count_in_review}"),
@@ -71,10 +84,15 @@ director_dialog = Dialog(
     ),
     Window(
         Const("👶📊 Выберите ребёнка для проверки отчёта"),
-        products_scroller,
+        prod_scroller,
         Row(
-            PrevPage(scroll=products_scroller, text=Format("◀️")),
-            NextPage(scroll=products_scroller, text=Format("▶️"))
+            PrevPage(scroll=prod_scroller, text=Format("◀️")),
+            NextPage(scroll=prod_scroller, text=Format("▶️"))
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back_menu",
+            on_click=lambda c, b, m: m.back()
         ),
         state=DirectorState.reports_child,
         getter=get_childs_in_review_btn
@@ -82,19 +100,19 @@ director_dialog = Dialog(
     Window(
         Format(
             "📑 <b>Отчёт за {date}</b>\n\n"
-
             "👶 <b>ФИО:</b> {full_name}\n"
             "🎂 <b>Дата рождения:</b> {birth_day}\n"
             "🆔 <b>Код ребёнка:</b> {child_code}\n\n"
-
-            "🏋️ <b>Тренер:</b> @{trainer_username}\n"
-            "👨‍👩‍👧 <b>Родитель:</b> @{parent_username}\n\n"
-
+            "🏋️ <b>Тренер:</b> {trainer_username}\n"
+            "👨‍👩‍👧 <b>Родитель:</b> {parent_username}\n\n"
             "📷 <b>Всего записей:</b> {count_rows}"
         ),
+        months_select,
         Button(
             text=Const("🔍 Смотреть отчёт"),
-            id="check_report"
+            id="check_report",
+            when=lambda data, widget, manager: data.get("count_rows", 0) > 0,
+            on_click=lambda c, b, m: m.switch_to(state=DirectorState.select_elements_in_review)
         ),
         Row(
             Button(
@@ -111,76 +129,53 @@ director_dialog = Dialog(
             id="back"
         ),
         state=DirectorState.report,
-        getter=get_report_card
-    ),
-
-
-
-
-    Window(
-        Const("👶 Выберите ребёнка:"),
-        products_scroller,
-        Row(
-            PrevPage(scroll=products_scroller, text=Format("◀️")),
-            NextPage(scroll=products_scroller, text=Format("▶️"))
-        ),
-        Button(
-            text=Const("⬅️ Назад"),
-            id="back_menu",
-            on_click=lambda c, b, m: m.back()
-        ),
-        state=DirectorState.select_child,
-        getter=get_childs_btn
+        getter=get_report_card,
     ),
     Window(
-        Const("📅 Выберите месяц:"),
+        Const("Выберите спортивный элемент"),
         Group(
             Select(
                 Format("{item[name]}"),
-                id="month_select",
-                items="months",
+                id="exercise_select",
+                items="exercises",
                 item_id_getter=lambda x: x["id"],
-                on_click=month_selected
+                on_click=on_exercise_selected,
             ),
-            width=3
+            width=1
         ),
         Button(
             text=Const("⬅️ Назад"),
             id="back_menu",
             on_click=lambda c, b, m: m.back()
         ),
-        state=DirectorState.select_month,
-        getter=months_getter
+        state=DirectorState.select_elements_in_review,
+        getter=get_exercise_btn
     ),
-    # Window(
-    #     Format(
-    #         "👶 Карточка ребёнка\n\n"
-
-    #         "👤 ФИО: {full_name}\n"
-    #         "📅 Дата рождения: {birth_date}\n"
-    #         "🆔 Код: {code}\n\n"
-
-    #         # "👨‍👩‍👧 Родитель: {parent_name}\n\n"
-
-    #         "📝 Записей за месяц: {reports_count}\n"
-    #         "📌 Последняя запись: {last_report_date}"
-    #     ),
-    #     Button(
-    #         text=Const("➕ Добавить запись"),
-    #         id="trainer_add_report",
-    #         on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_sport_item_for_add_report)
-    #     ),
-    #     Button(
-    #         text=Const("📈 История прогресса"),
-    #         id="progres_history",
-    #         on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_sports_item)
-    #     ),
-    #     Button(
-    #         text=Const("⬅️ Назад"),
-    #         id="back_menu",
-    #         on_click=lambda c, b, m: m.back()
-    #     ),
-    #     state=TrainerStates.child_card,
-    #     # getter=get_child_data
-    # ),
+    Window(
+        Format("{text}"),
+        DynamicMedia("photo"),
+        Row(
+            Button(text=Const("◀️"), id="prev", on_click=prev_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
+            Button(text=Const("▶️"), id="next", on_click=next_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
+        ),
+        # Button(
+        #     text=Const("✏️ Добавить комментарий"),
+        #     id="add_comment",
+        #     on_click=lambda c, b, m: m.switch_to(state=TrainerStates.add_comment),
+        #     when=lambda data, widget, manager: data.get("text") != "Нет данных" and not data.get("has_comment")
+        # ),
+        # Button(
+        #     text=Const("📝 Изменить комментарий"),
+        #     id="edit_comment",
+        #     on_click=lambda c, b, m: m.switch_to(state=TrainerStates.add_comment),
+        #     when=lambda data, widget, manager: data.get("text") != "Нет данных" and data.get("has_comment"),
+        # ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back_menu",
+            on_click=lambda c, b, m: m.switch_to(state=DirectorState.select_elements_in_review)
+        ),
+        state=DirectorState.history_progress,
+        getter=get_current_history_item
+    ),
 )

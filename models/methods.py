@@ -7,6 +7,7 @@ from sqlalchemy import case, update, delete, select, exists, func
 from sqlalchemy.exc import IntegrityError
 
 from typing import List, Union, Optional
+from collections import defaultdict
 
 from .models import *
 from utils import generate_child_code
@@ -89,7 +90,7 @@ class ChildService:
                     continue
                 return child
             
-            
+
     async def get_children_with_reports_in_review(self):
         stmt = (
             select(Child)
@@ -317,6 +318,34 @@ class ReportService:
         return result.scalar_one()
 
 
+    async def get_reports_grouped_review(self, child_id: str):
+        result = await self.session.execute(
+            select(Report)
+            .where(
+                Report.child_id == child_id,
+                Report.status == ReportStatus.in_review
+            )
+        )
+        reports = result.scalars().all()
+
+        grouped = defaultdict(list)
+        for report in reports:
+            grouped[report.month].append(report)
+
+        return dict(grouped)
+    
+
+    async def get_months_in_review(self, child_id: str) -> list[str]:
+        result = await self.session.execute(
+            select(Report.month)
+            .where(
+                Report.child_id == child_id,
+                Report.status == ReportStatus.in_review
+            )
+            .distinct()
+            .order_by(Report.month.asc())
+        )
+        return [row[0] for row in result.all()]
 
 
 
