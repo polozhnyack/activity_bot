@@ -97,13 +97,16 @@ def html_code_creator(block: str) -> str:
     <style>
         @page {{
             margin: 0;
-            size: A4 landscape;
+            size: A3 landscape;
         }}
         body {{
             font-family: Arial, sans-serif;
             margin: 0;
             background-color: #f5f7ff;
+            transform: scale(0.6);
+            transform-origin: top left; /* 🔥 масштабируем из верхнего левого угла */
         }}
+
         .month-container {{
             display: flex;
             justify-content: flex-end;
@@ -126,7 +129,7 @@ def html_code_creator(block: str) -> str:
 
             transform-origin: top left; /* масштабирование от верхнего левого угла */
         }}
-        
+
         .progress-journal-wrapper {{
             position: relative;
             display: inline-block;
@@ -141,6 +144,7 @@ def html_code_creator(block: str) -> str:
             margin-bottom: 50px;
             page-break-inside: avoid;
             max-width: 28cm;
+            width: 100%;
         }}
         .progress-journal th,
         .progress-journal td {{
@@ -154,7 +158,7 @@ def html_code_creator(block: str) -> str:
             font-weight: bold;
             text-align: left;
             color: white;
-            font-size: 24px;
+            font-size: 28px;
             padding: 15px;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }}
