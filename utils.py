@@ -86,8 +86,6 @@ def render_html_to_pdf(html_content: str, output_path: str = "report.pdf"):
     print(f"✅ PDF успешно создан: {output_path}")
 
 
-
-
 def html_code_creator(block: str) -> str:
     html = f"""
     <!DOCTYPE html>
@@ -105,7 +103,6 @@ def html_code_creator(block: str) -> str:
             font-family: Arial, sans-serif;
             margin: 0;
             background-color: #f5f7ff;
-            zoom: 0.020;
         }}
         .month-container {{
             display: flex;
@@ -124,11 +121,15 @@ def html_code_creator(block: str) -> str:
             box-shadow: 0 6px 20px rgba(0,0,0,0.25);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }}
-
         .month-block {{
             page-break-inside: avoid; /* чтобы месяц и таблица не разрывались */
-            transform: scale(0.5); /* уменьшает всю таблицу и month-container */
+
             transform-origin: top left; /* масштабирование от верхнего левого угла */
+        }}
+        
+        .progress-journal-wrapper {{
+            position: relative;
+            display: inline-block;
         }}
         
         .progress-journal {{
