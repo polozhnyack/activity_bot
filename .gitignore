@@ -6,3 +6,10 @@ __pycache__/
 
 alembic.ini
 migrations/
+temp/*
+*json
+
+test.py
+
+*html
+*pdf

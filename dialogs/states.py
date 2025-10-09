@@ -38,4 +38,6 @@ class DirectorState(StatesGroup):
     select_elements_in_review = State()
     report_review = State()
     history_progress = State()
+
+    agree_to_approve_report = State()
     

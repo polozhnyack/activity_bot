@@ -117,7 +117,8 @@ director_dialog = Dialog(
         Row(
             Button(
                 text=Const("✅ Утвердить"),
-                id="approve"
+                id="approve",
+                on_click=lambda c, b, m: m.switch_to(state=DirectorState.agree_to_approve_report)
             ),
             Button(
                 text=Const("❌ Отклонить"),
@@ -158,18 +159,6 @@ director_dialog = Dialog(
             Button(text=Const("◀️"), id="prev", on_click=prev_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
             Button(text=Const("▶️"), id="next", on_click=next_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
         ),
-        # Button(
-        #     text=Const("✏️ Добавить комментарий"),
-        #     id="add_comment",
-        #     on_click=lambda c, b, m: m.switch_to(state=TrainerStates.add_comment),
-        #     when=lambda data, widget, manager: data.get("text") != "Нет данных" and not data.get("has_comment")
-        # ),
-        # Button(
-        #     text=Const("📝 Изменить комментарий"),
-        #     id="edit_comment",
-        #     on_click=lambda c, b, m: m.switch_to(state=TrainerStates.add_comment),
-        #     when=lambda data, widget, manager: data.get("text") != "Нет данных" and data.get("has_comment"),
-        # ),
         Button(
             text=Const("⬅️ Назад"),
             id="back_menu",
@@ -178,4 +167,25 @@ director_dialog = Dialog(
         state=DirectorState.history_progress,
         getter=get_current_history_item
     ),
+    Window(
+        Const(
+            "<b>Вы уверены, что хотите утвердить этот отчёт?</b>\n\n"
+            "После утверждения:\n"
+            "• отчёт будет сгенерирован в PDF формате;\n"
+            "• родителю будет отправлено сообщение с файлом.\n"
+        ),
+        Row(
+            Button(
+                text=Const("✅ Да"),
+                id="yes_approve",
+                on_click=approve_report
+            ),
+            Button(
+                text=Const("❌ Нет"),
+                id="no_approve",
+                on_click=lambda c, b, m: m.switch_to(state=DirectorState.report)
+            ),
+        ),
+        state=DirectorState.agree_to_approve_report
+    )
 )

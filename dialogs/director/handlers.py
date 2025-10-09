@@ -14,7 +14,12 @@ from models.models import *
 from config import load_config
 from logger import logger
 from dialogs.trainer.getter import get_childs_btn
+from utils import resolve_file_paths_aiogram
 
+import json
+
+
+config = load_config()
 
 async def on_month_selected(c, widget, manager: DialogManager, item_id: str):
     logger.debug(f"Вы выбрали месяц: {item_id}")
@@ -126,3 +131,36 @@ async def prev_history(callback: CallbackQuery, button, dialog_manager: DialogMa
         dialog_manager.dialog_data["history_index"] - 1, 0
     )
     await dialog_manager.switch_to(state=DirectorState.history_progress)
+
+
+
+async def approve_report(callback: CallbackQuery, button, dialog_manager: DialogManager):
+    child_service: ChildService = dialog_manager.middleware_data["ChildService"]
+    report_service: ReportService = dialog_manager.middleware_data["ReportService"]
+
+    child_code = dialog_manager.dialog_data.get("child_code")
+    selected_month = dialog_manager.dialog_data.get("selected_month")
+
+    months_names = [
+        "Январь", "Февраль", "Март", "Апрель",
+        "Май", "Июнь", "Июль", "Август", 
+        "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+    ]
+
+    logger.debug(f"Подтверждение отчета для ребенка {child_code} за месяц {selected_month}")
+
+    grouped = await report_service.get_child_reports_json(child_code)
+
+    logger.debug(json.dumps(grouped, indent=4, ensure_ascii=False))
+    if selected_month not in grouped:
+        await dialog_manager.event.answer("Нет данных для утверждения.", show_alert=True)
+        return
+    
+    file_paths = await resolve_file_paths_aiogram(
+        child_code=child_code,
+        bot=dialog_manager.event.bot,
+        reports_data=grouped,
+        download_dir="temp"
+    )
+
+    logger.debug(json.dumps(file_paths, indent=4, ensure_ascii=False))

@@ -346,8 +346,41 @@ class ReportService:
             .order_by(Report.month.asc())
         )
         return [row[0] for row in result.all()]
+    
 
+    async def get_child_reports_json(self, child_id: str) -> dict:
+        result = await self.session.execute(
+            select(Report)
+            # .where(Report.child_id == child_id, Report.status == ReportStatus.approved)
+            .where(Report.child_id == child_id, Report.status == ReportStatus.in_review)
+            .options(
+                selectinload(Report.photos).selectinload(Photo.exercise),
+                selectinload(Report.comments)
+            )
+        )
+        reports = result.scalars().all()
 
+        data = {}
+
+        for report in reports:
+            month = report.month
+            if month not in data:
+                data[month] = {}
+
+            for photo in report.photos:
+                exercise_name = photo.exercise.name if photo.exercise else "Без упражнения"
+                if exercise_name not in data[month]:
+                    data[month][exercise_name] = []
+
+                related_comments = [
+                    c.text for c in report.comments
+                ]
+
+                data[month][exercise_name].append({
+                    "file_id": photo.file_id,
+                    "comments": related_comments
+                })
+        return data
 
 
 
