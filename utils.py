@@ -82,7 +82,7 @@ def render_html_to_pdf(html_content: str, output_path: str = "report.pdf"):
         output_path (str): путь к итоговому PDF
     """
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-    HTML(string=html_content, base_url=".").write_pdf(output_path, zoom=0.4)
+    HTML(string=html_content, base_url=".").write_pdf(output_path)
     print(f"✅ PDF успешно создан: {output_path}")
 
 
@@ -105,6 +105,7 @@ def html_code_creator(block: str) -> str:
             background-color: #f5f7ff;
             transform: scale(0.6);
             transform-origin: top left; /* 🔥 масштабируем из верхнего левого угла */
+            width: 166%;
         }}
 
         .month-container {{
@@ -118,9 +119,8 @@ def html_code_creator(block: str) -> str:
             font-size: 18px;
             text-transform: capitalize;
             color: #ffffff;
-            background: linear-gradient(135deg, #4facfe, #2f45f0);
+            background: linear-gradient(135deg, #5d66e1, #253be6);
             padding: 4px 10px;
-            border-radius: 15px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.25);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }}
@@ -133,6 +133,7 @@ def html_code_creator(block: str) -> str:
         .progress-journal-wrapper {{
             position: relative;
             display: inline-block;
+            max-width: 20cm;
         }}
         
         .progress-journal {{
@@ -144,14 +145,16 @@ def html_code_creator(block: str) -> str:
             margin-bottom: 50px;
             page-break-inside: avoid;
             max-width: 28cm;
-            width: 100%;
+            width: auto;     /* подстраивается под содержимое */
+            table-layout: fixed;
         }}
         .progress-journal th,
         .progress-journal td {{
             border: 1px solid #ddd;
             padding: 10px;
             text-align: center;
-            vertical-align: top;
+            vertical-align: middle;
+            max-width: 340px;
         }}
         .exercise-header {{
             background: linear-gradient(135deg, #2f45f0, #4facfe);
@@ -182,24 +185,66 @@ def html_code_creator(block: str) -> str:
             text-align: center;
             flex-direction: column;
         }}
-        .comment-row td {{
-            background-color: #6071f4;
-            text-align: left;
-            font-style: italic;
-            color: white;
-            font-size: 14px;
-            padding: 5px 10px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+        .comment-row {{
+            text-align: center;
+            font-style: arial;
+            color: black;
+            font-size: 18px;
         }}
         .exercise-details img {{
-            width: 320px;
-            height: 240px;
-            object-fit: cover;
+            width: 100%;        /* подстраивается под ширину ячейки */
+            height: auto;       /* сохраняет пропорции */
+            object-fit: cover;  /* кадрирование при необходимости */
             display: block;
             margin: 0 auto;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            max-width: 300px;   /* необязательно, ограничение на максимальную ширину */
+        }}
+
+        .months-row {{
+            background: linear-gradient(135deg, #2f45f0, #4facfe);
+            color: #ffffff;
+        }}
+
+
+        .months-row .month {{
+            font-weight: bold;
+            font-size: 18px;
+            text-transform: capitalize;
+            text-align: center;
+            vertical-align: middle;
+            padding: 10px;
+
+            background: transparent;
+            box-shadow: none;
+            transition: none;
+        }}
+
+        .exercise-name .journal-title {{
+            font-size: 20px;  /* размер текста ЖУРНАЛ ПРОГРЕССА */
+            font-weight: bold;
+            text-align: center;
+        }}
+
+        .exercise-name .child-name {{
+            font-size: 24px;  /* размер текста имени ребёнка */
+            font-weight: bold;
+            text-align: center;
+            margin-top: 5px;
+        }}
+
+
+
+        .progress-journal .exercise-name {{
+            width: 25%; /* Фиксированная ширина для первой колонки */
+            font-size: 25px;
+        }}
+            .progress-journal .month {{
+            width: 40%; /* Фиксированная ширина для месяцев */
+            font-size: 25px;
+            text-align: center;
         }}
     </style>
     </head>

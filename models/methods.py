@@ -351,15 +351,14 @@ class ReportService:
     async def get_child_reports_json(self, child_id: str) -> dict:
         result = await self.session.execute(
             select(Report)
-            # .where(Report.child_id == child_id, Report.status == ReportStatus.approved)
-            .where(Report.child_id == child_id, Report.status == ReportStatus.in_review)
+            .where(Report.child_id == child_id, Report.status == ReportStatus.approved)
+            # .where(Report.child_id == child_id, Report.status == ReportStatus.in_review)
             .options(
                 selectinload(Report.photos).selectinload(Photo.exercise),
                 selectinload(Report.comments)
             )
         )
         reports = result.scalars().all()
-
         data = {}
 
         for report in reports:
