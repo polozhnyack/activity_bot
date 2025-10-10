@@ -97,7 +97,7 @@ def html_code_creator(block: str) -> str:
     <style>
         @page {{
             margin: 0;
-            size: A3 landscape;
+            size: A4 landscape;
         }}
         body {{
             font-family: Arial, sans-serif;
@@ -133,7 +133,8 @@ def html_code_creator(block: str) -> str:
         .progress-journal-wrapper {{
             position: relative;
             display: inline-block;
-            max-width: 20cm;
+            max-width: none;
+            width: 100%;
         }}
         
         .progress-journal {{
@@ -151,10 +152,10 @@ def html_code_creator(block: str) -> str:
         .progress-journal th,
         .progress-journal td {{
             border: 1px solid #ddd;
-            padding: 10px;
+            padding: 4px;
             text-align: center;
             vertical-align: middle;
-            max-width: 340px;
+            max-width: 152px;
         }}
         .exercise-header {{
             background: linear-gradient(135deg, #2f45f0, #4facfe);
@@ -189,15 +190,17 @@ def html_code_creator(block: str) -> str:
             text-align: center;
             font-style: arial;
             color: black;
-            font-size: 18px;
+            font-size: 9px;
+            overflow-wrap: break-word;
         }}
         .exercise-details img {{
             width: 100%;        /* подстраивается под ширину ячейки */
             height: auto;       /* сохраняет пропорции */
             object-fit: cover;  /* кадрирование при необходимости */
             display: block;
-            margin: 0 auto;
-            border-radius: 10px;
+
+            margin-bottom: 4px;
+            border-radius: 9px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             max-width: 300px;   /* необязательно, ограничение на максимальную ширину */
@@ -238,11 +241,9 @@ def html_code_creator(block: str) -> str:
 
 
         .progress-journal .exercise-name {{
-            width: 25%; /* Фиксированная ширина для первой колонки */
             font-size: 25px;
         }}
             .progress-journal .month {{
-            width: 40%; /* Фиксированная ширина для месяцев */
             font-size: 25px;
             text-align: center;
         }}
