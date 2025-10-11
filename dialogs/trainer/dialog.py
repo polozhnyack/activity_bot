@@ -44,9 +44,6 @@ trainer_dialog = Dialog(
             id="start", 
             on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_month)
         ),
-        Button(
-            
-        ),
         state=TrainerStates.trainer_menu,
     ),
     Window(
@@ -244,6 +241,6 @@ trainer_dialog = Dialog(
 
 
 
-progress_history = Dialog(
+# progress_history = Dialog(
     
-)
+# )

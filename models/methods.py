@@ -89,7 +89,29 @@ class ChildService:
                     await self.session.rollback()
                     continue
                 return child
-            
+
+
+    async def delete_by_code(self, child_code: str) -> bool:
+        result = await self.session.execute(select(Child).where(Child.code == child_code))
+        child = result.scalars().first()
+        if not child:
+            return False
+
+        await self.session.execute(delete(Comment).where(Comment.report_id.in_(
+            select(Report.id).where(Report.child_id == child_code)
+        )))
+
+        await self.session.execute(delete(Photo).where(Photo.report_id.in_(
+            select(Report.id).where(Report.child_id == child_code)
+        )))
+
+        await self.session.execute(delete(Report).where(Report.child_id == child_code))
+
+        await self.session.delete(child)
+
+        await self.session.commit()
+        return True
+
 
     async def get_children_with_reports_in_review(self):
         stmt = (

@@ -47,6 +47,8 @@ async def command_start_process(
             await dialog_manager.start(state=TrainerStates.trainer_menu)
         elif user.role == UserRole.director:
             await dialog_manager.start(state=DirectorState.director_menu)
+        elif user.role == UserRole.admin:
+            await dialog_manager.start(state=AdminState.admin_menu)
 
     elif user.role == UserRole.parent:
         child = await UserService.get_child_by_parent_id(

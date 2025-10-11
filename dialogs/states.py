@@ -42,3 +42,9 @@ class DirectorState(StatesGroup):
     agree_to_approve_report = State()
     reject_report = State()
     
+
+class AdminState(StatesGroup):
+    admin_menu = State()
+
+    child_create_or_delete = State()
+    grant_or_revoke_role = State()
