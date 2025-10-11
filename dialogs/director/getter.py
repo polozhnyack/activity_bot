@@ -56,6 +56,8 @@ async def get_report_card(dialog_manager: DialogManager, **kwargs):
 
     months_btn = await report_service.get_months_in_review(child_code)
 
+    logger.debug(f"{dialog_manager.dialog_data}")
+
     return {
         "date": selected_month or "-",
         "full_name": child.full_name or "-",

@@ -276,41 +276,52 @@ class ReportService:
         child_id: str,
         month: str,
         trainer_id: int,
-    ) -> bool:
-        # Проверяем, есть ли отчёты
-        result = await self.session.execute(
-            select(func.count()).select_from(Report).where(
-                Report.child_id == child_id,
-                Report.month == month,
-                Report.status == ReportStatus.draft
-            )
-        )
-        count = result.scalar_one()
+    ) -> Union[bool, str]:
+        """
+        Проверяет, что у ребёнка за указанный месяц:
+        - каждый отчёт содержит ровно одно фото;
+        - у каждого фото есть exercise_id;
+        - нет дубликатов упражнений.
+        """
 
-        if count == 0:
-            return False
+        result = await self.session.execute(
+            select(Report)
+            .options(joinedload(Report.photos).joinedload(Photo.exercise))
+            .where(Report.child_id == child_id, Report.month == month)
+        )
+        reports = result.unique().scalars().all()
+
+        if not reports:
+            return "❌ У ребёнка нет отчётов за этот месяц."
+
+        seen_exercises = set()
+
+        for report in reports:
+            photos = report.photos
+
+            if len(photos) != 1:
+                return f"❌ В отчёте {report.id} должно быть ровно одно фото, найдено {len(photos)}."
+
+            photo = photos[0]
+
+            if not photo.exercise_id:
+                return f"❌ Фото в отчёте {report.id} не привязано к упражнению."
+
+            if photo.exercise_id in seen_exercises:
+                return f"❌ Найден дубликат упражнения {photo.exercise.name} в разных отчётах."
+            seen_exercises.add(photo.exercise_id)
 
         await self.session.execute(
             update(Report)
             .where(Report.child_id == child_id, Report.month == month)
-            .values(status=ReportStatus.in_review)
-            .execution_options(synchronize_session="fetch")
-        )
-
-        await self.session.execute(
-            update(Report)
-            .where(
-                Report.child_id == child_id,
-                Report.month == month,
-                Report.trainer_id.is_(None)
-            )
-            .values(trainer_id=trainer_id)
+            .values(status=ReportStatus.in_review, trainer_id=trainer_id)
             .execution_options(synchronize_session="fetch")
         )
 
         await self.session.commit()
         return True
-    
+
+        
     
     async def get_reports_in_review_count(self) -> int:
         stmt = select(func.count()).select_from(Report).where(Report.status == ReportStatus.in_review)
@@ -351,8 +362,8 @@ class ReportService:
     async def get_child_reports_json(self, child_id: str) -> dict:
         result = await self.session.execute(
             select(Report)
-            .where(Report.child_id == child_id, Report.status == ReportStatus.approved)
-            # .where(Report.child_id == child_id, Report.status == ReportStatus.in_review)
+            # .where(Report.child_id == child_id, Report.status == ReportStatus.approved)
+            .where(Report.child_id == child_id, Report.status == ReportStatus.in_review)
             .options(
                 selectinload(Report.photos).selectinload(Photo.exercise),
                 selectinload(Report.comments)
@@ -381,6 +392,32 @@ class ReportService:
                 })
         return data
 
+
+    async def reset_reports_to_draft(self, child_code: str, selected_month: str):
+
+        stmt = (
+            select(Report)
+            .join(Report.child)
+            .where(Child.code == child_code, Report.month == selected_month)
+        )
+        result = await self.session.execute(stmt)
+        reports = result.scalars().all()
+
+        if not reports:
+            return False, None
+
+        trainer_ids = {r.trainer_id for r in reports if r.trainer_id is not None}
+
+        if len(trainer_ids) != 1:
+            return False, None
+
+        trainer_id = trainer_ids.pop()
+
+        for report in reports:
+            report.status = ReportStatus.draft
+
+        await self.session.commit()
+        return True, trainer_id
 
 
 

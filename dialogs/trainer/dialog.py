@@ -44,6 +44,9 @@ trainer_dialog = Dialog(
             id="start", 
             on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_month)
         ),
+        Button(
+            
+        ),
         state=TrainerStates.trainer_menu,
     ),
     Window(
@@ -132,7 +135,7 @@ trainer_dialog = Dialog(
         Button(
             text=Const("⬅️ Назад"),
             id="back_menu",
-            on_click=lambda c, b, m: m.back()
+            on_click=lambda c, b, m: m.switch_to(TrainerStates.child_card)
         ),
         state=TrainerStates.select_sports_item,
         getter=get_exercise_btn
@@ -152,7 +155,7 @@ trainer_dialog = Dialog(
         Button(
             text=Const("⬅️ Назад"),
             id="back_menu",
-            on_click=lambda c, b, m: m.back()
+            on_click=lambda c, b, m: m.switch_to(TrainerStates.child_card)
         ),
         state=TrainerStates.select_sport_item_for_add_report,
         getter=get_exercise_btn
@@ -213,7 +216,7 @@ trainer_dialog = Dialog(
         Button(
             text=Const("⬅️ Назад"),
             id="back_menu",
-            on_click=lambda c, b, m: m.back()
+            on_click=lambda c, b, m: m.switch_to(TrainerStates.history_progress)
         ),
         state=TrainerStates.add_comment
     ),
@@ -236,4 +239,11 @@ trainer_dialog = Dialog(
         ),
         state=TrainerStates.confidence_window
     ),
+)
+
+
+
+
+progress_history = Dialog(
+    
 )

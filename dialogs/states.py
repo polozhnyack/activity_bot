@@ -40,4 +40,5 @@ class DirectorState(StatesGroup):
     history_progress = State()
 
     agree_to_approve_report = State()
+    reject_report = State()
     

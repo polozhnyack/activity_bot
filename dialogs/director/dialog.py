@@ -122,7 +122,8 @@ director_dialog = Dialog(
             ),
             Button(
                 text=Const("❌ Отклонить"),
-                id="reject"
+                id="reject",
+                on_click=lambda c, b, m: m.switch_to(state=DirectorState.reject_report)
             ),
         ),
         Button(
@@ -169,7 +170,7 @@ director_dialog = Dialog(
     ),
     Window(
         Const(
-            "<b>Вы уверены, что хотите утвердить этот отчёт?</b>\n\n"
+            "<b>Вы уверены, что хотите УТВЕРДИТЬ этот отчёт?</b>\n\n"
             "После утверждения:\n"
             "• отчёт будет сгенерирован в PDF формате;\n"
             "• родителю будет отправлено сообщение с файлом.\n"
@@ -187,5 +188,26 @@ director_dialog = Dialog(
             ),
         ),
         state=DirectorState.agree_to_approve_report
+    ),
+    Window(
+        Const(
+            "<b>Вы уверены, что хотите ОТКЛОНИТЬ этот отчёт?</b>\n\n"
+            "После отклонения:\n"
+            "• отчёт вернётся в статус «Создан»;\n"
+            "• тренеру придёт уведомление о том, что отчёт за месяц отклонён.\n"
+        ),
+        Row(
+            Button(
+                text=Const("✅ Да"),
+                id="yes_approve",
+                on_click=approve_report
+            ),
+            Button(
+                text=Const("❌ Нет"),
+                id="no_approve",
+                on_click=lambda c, b, m: m.switch_to(state=DirectorState.report)
+            ),
+        ),
+        state=DirectorState.reject_report
     )
 )

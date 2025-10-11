@@ -309,13 +309,15 @@ async def on_confirm_close(callback: CallbackQuery, button, dialog_manager: Dial
     year = datetime.now().year
     month_str = f"{year}-{month:02d}" 
 
-    if await service.send_reports_to_review(
+    result = await service.send_reports_to_review(
         child_id=child_id,
         trainer_id=trainer_id,
         month=month_str
-    ):
+    )
+
+    if result is True:
         await callback.answer("✅ Отчёты закрыты и отправлены на проверку.", show_alert=True)
-    else:
-        await callback.answer("❌ Отчетов за месяц не найдено.", show_alert=True)
+    elif isinstance(result, str):
+        await callback.answer(result, show_alert=True)
 
     await dialog_manager.switch_to(state=TrainerStates.select_month)

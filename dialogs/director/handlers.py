@@ -2,7 +2,7 @@ from aiogram import Router
 from aiogram_dialog import DialogManager
 from aiogram.types import Message, CallbackQuery
 from aiogram_dialog.api.entities.media import MediaAttachment, MediaId
-from aiogram.types import ContentType
+from aiogram.types import ContentType, FSInputFile
 
 from aiogram_dialog.widgets.kbd import Select
 
@@ -14,7 +14,7 @@ from models.models import *
 from config import load_config
 from logger import logger
 from dialogs.trainer.getter import get_childs_btn
-from utils import resolve_file_paths_aiogram
+from utils import resolve_file_paths_aiogram, generate_progress_html_vertical, render_html_to_pdf, html_code_creator
 
 import json
 
@@ -133,7 +133,6 @@ async def prev_history(callback: CallbackQuery, button, dialog_manager: DialogMa
     await dialog_manager.switch_to(state=DirectorState.history_progress)
 
 
-
 async def approve_report(callback: CallbackQuery, button, dialog_manager: DialogManager):
     child_service: ChildService = dialog_manager.middleware_data["ChildService"]
     report_service: ReportService = dialog_manager.middleware_data["ReportService"]
@@ -141,26 +140,85 @@ async def approve_report(callback: CallbackQuery, button, dialog_manager: Dialog
     child_code = dialog_manager.dialog_data.get("child_code")
     selected_month = dialog_manager.dialog_data.get("selected_month")
 
-    months_names = [
-        "Январь", "Февраль", "Март", "Апрель",
-        "Май", "Июнь", "Июль", "Август", 
-        "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
-    ]
-
     logger.debug(f"Подтверждение отчета для ребенка {child_code} за месяц {selected_month}")
 
     grouped = await report_service.get_child_reports_json(child_code)
+
+    child: Child = await child_service.get_by_code(child_code)
 
     logger.debug(json.dumps(grouped, indent=4, ensure_ascii=False))
     if selected_month not in grouped:
         await dialog_manager.event.answer("Нет данных для утверждения.", show_alert=True)
         return
     
-    file_paths = await resolve_file_paths_aiogram(
+    report_data = await resolve_file_paths_aiogram(
         child_code=child_code,
         bot=dialog_manager.event.bot,
         reports_data=grouped,
         download_dir="temp"
     )
 
-    logger.debug(json.dumps(file_paths, indent=4, ensure_ascii=False))
+    logger.debug(json.dumps(report_data, indent=4, ensure_ascii=False))
+    html_table = generate_progress_html_vertical(report_data, child.full_name)
+
+    full_html = html_code_creator(html_table)
+
+    with open("progress_journal.html", "w", encoding="utf-8") as f:
+        f.write(full_html)
+
+    clean_name = lambda name: name.replace(" ", "_").lower()
+    child_name_clean = clean_name(child.full_name)
+
+    pdf_path = render_html_to_pdf(full_html, f"{child_name_clean}.pdf")
+
+    try:
+        await callback.bot.send_document(
+            chat_id=child.parent_id,
+            document=FSInputFile(path=pdf_path),
+            caption=f"<b>📄 Отчёт по ученику:</b> {child.full_name}",
+            parse_mode="HTML"
+        )
+        await callback.message.answer("✅ Отчёт успешно отправлен родителю.")
+    except Exception as e:
+        await callback.message.answer(f"❌ Не удалось отправить отчёт родителю.\nОшибка: {e}")
+    
+    await dialog_manager.done()
+
+
+
+async def reject_report(callback: CallbackQuery, button, dialog_manager: DialogManager):
+    child_code = dialog_manager.dialog_data.get("child_code")
+    selected_month = dialog_manager.dialog_data.get("selected_month")
+
+    report_service: ReportService = dialog_manager.middleware_data["ReportService"]
+    child_service: ChildService = dialog_manager.middleware_data["ChildService"]
+
+    child: Child = await child_service.get_by_code(child_code)
+
+    success, trainer_id = await report_service.reset_reports_to_draft(
+        child_code=child_code,
+        selected_month=selected_month
+    )
+
+    if not success:
+        await callback.message.answer(
+            "❌ Не удалось отклонить отчёт: либо отчётов нет, либо у них разные тренеры."
+        )
+        await callback.answer()
+        return
+
+    if trainer_id:
+        try:
+            await callback.bot.send_message(
+                chat_id=trainer_id,
+                text=(
+                    f"❌ Отчёт за {selected_month} для ребёнка {child.full_name} был отклонён.\n"
+                    "Отчёт вернулся в статус 'Создан'."
+                )
+            )
+        except Exception as e:
+            await callback.message.answer(f"❌ Ошибка при отправке сообщения тренеру: {e}")
+            logger.error(f"Ошибка при отправке сообщения тренеру: {e}")
+
+    await callback.message.answer("✅ Отчёт успешно отклонён.")
+    await dialog_manager.switch_to(DirectorState.director_menu)
