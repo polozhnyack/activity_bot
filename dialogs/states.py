@@ -48,3 +48,6 @@ class AdminState(StatesGroup):
 
     child_create_or_delete = State()
     grant_or_revoke_role = State()
+
+    role_select = State()
+    user_select = State()

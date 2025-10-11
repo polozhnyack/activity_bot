@@ -13,7 +13,6 @@ from config import load_config
 from dialogs.trainer.getter import get_childs_btn, months_getter, get_childs_in_review_btn, get_exercise_btn
 
 
-
 admin_window = Dialog(
     Window(
         Const("Роль: Администратор.\nВыберите действие:"),
@@ -31,12 +30,9 @@ admin_window = Dialog(
         ),
         Row(
             Button(
-                text=Const("🛡 Выдать роль"),
-                id="grant_role"
-            ),
-            Button(
-                text=Const("❌ Забрать роль"),
-                id="revoke_role"
+                text=Const("🛡 Изменить роль"),
+                id="edit_role",
+                on_click=lambda c, b, m: m.switch_to(state=AdminState.role_select)
             ),
         ),
         state=AdminState.admin_menu
@@ -55,5 +51,38 @@ admin_window = Dialog(
         state=AdminState.child_create_or_delete,
         getter=child_create_delete_getter
     ),
-    
+    Window(
+        Format("{role_editor_text}"),
+        Group(
+            Select(
+                Format("{item[0]}"),
+                id="select_role",
+                item_id_getter=lambda x: x[1],
+                items="roles",
+                on_click=on_role_selected,
+            ),
+            width=1,
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back",
+            on_click=lambda c, b, m: m.switch_to(state=AdminState.admin_menu),
+        ),
+        getter=get_roles_data,
+        state=AdminState.role_select,
+    ),
+    Window(
+        Const("Отправьте пользователя по кнопке 👇"),
+        MessageInput(
+            user_contact_handler,
+            # content_types=ContentType.USER_SHARED
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back",
+            on_click=go_back_admin_menu,
+        ),
+        state=AdminState.user_select
+    )
+
 )

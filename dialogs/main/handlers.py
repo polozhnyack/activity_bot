@@ -82,26 +82,36 @@ async def child_code_handler(
     child: Child = await child_service.get_by_code(message.text.strip())
 
     if child:
-        await user_service.attach_to_parent(
+        result = await user_service.attach_to_parent(
             parent_id=message.from_user.id,
             child_code=message.text.strip()
         )
 
-        manager.dialog_data.update({
-            "parent_id": message.from_user.id,
-            "child_code": child.code,
-            "child_name": child.full_name,
-            "child_birth_date": child.birth_date,
-        })
-        
-        await manager.start(
-            state=ChildInfo.start_info,
-            data=manager.dialog_data
-        )
-    
+        if result == "attached":
+            manager.dialog_data.update({
+                "parent_id": message.from_user.id,
+                "child_code": child.code,
+                "child_name": child.full_name,
+                "child_birth_date": child.birth_date,
+            })
+
+            await manager.start(
+                state=ChildInfo.start_info,
+                data=manager.dialog_data
+            )
+
+        elif result == "already_attached":
+            await message.answer("⚠️ Этот ребёнок уже прикреплён к другому родителю.")
+            await manager.switch_to(ParentRegistration.input_code)
+
+        else:
+            await message.answer("❌ Неверный код, попробуйте снова.")
+            await manager.switch_to(ParentRegistration.input_code)
+
     else:
         await message.answer("❌ Неверный код, попробуйте снова.")
         await manager.switch_to(ParentRegistration.input_code)
+
 
 
 

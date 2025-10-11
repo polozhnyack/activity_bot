@@ -49,18 +49,42 @@ class UserService:
         )
         child = result.scalars().first()
         if not child:
-            return False
+            return "not_found"
+        
 
+        if child.parent_id is not None:
+            return "already_attached"
 
         child.parent_id = parent_id
         self.session.add(child)
         await self.session.commit()
-        return True
+        return "attached"
     
 
     async def get_by_parent_id(self, parent_id: int) -> Optional["Child"]:
         result = await self.session.execute(select(Child).where(Child.parent_id == parent_id))
         return result.scalars().first()
+    
+
+    async def update_role(self, user_id: int, new_role_str: str) -> bool:
+
+        new_role = UserRole(new_role_str)
+
+        result = await self.session.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalars().first()
+        if not user:
+            return False
+
+        if user.role == new_role:
+            return True
+
+        user.role = new_role
+        self.session.add(user)
+        await self.session.commit()
+        return True
+
     
 
 @dataclass
