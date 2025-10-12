@@ -41,7 +41,10 @@ async def get_childs_btn(dialog_manager: DialogManager, **kwargs):
 
     childs.sort(key=lambda c: c.full_name.lower())
 
+    show_pager = len(childs) > 10
+
     return {
+        "show_pager": show_pager,
         "childs": childs
     }
 

@@ -28,6 +28,22 @@ products_scroller = ScrollingGroup(
 )
 
 
+child_history_scroller = ScrollingGroup(
+    Select(
+        Format("{item.full_name}"),
+        id="child",
+        item_id_getter=lambda p: f"code_{p.code}",
+        items="childs",
+        on_click=child_selected_history
+    ),
+    id="products_scroller",
+    width=1,
+    height=10,
+    hide_on_single_page=True,
+    hide_pager=True,
+)
+
+
 trainer_dialog = Dialog(
     Window(
         Const(
@@ -43,6 +59,11 @@ trainer_dialog = Dialog(
             text=Const("➡️ Начать работу"), 
             id="start", 
             on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_month)
+        ),
+        Button(
+            text=Const("📜 Смотреть историю"),
+            id="history",
+            on_click=lambda c, b, m: m.start(state=ProgressHistory.history_menu)
         ),
         state=TrainerStates.trainer_menu,
     ),
@@ -71,7 +92,8 @@ trainer_dialog = Dialog(
         products_scroller,
         Row(
             PrevPage(scroll=products_scroller, text=Format("◀️")),
-            NextPage(scroll=products_scroller, text=Format("▶️"))
+            NextPage(scroll=products_scroller, text=Format("▶️")),
+            when=lambda data, *args: data.get("show_pager", False)
         ),
         Button(
             text=Const("⬅️ Назад"),
@@ -100,7 +122,7 @@ trainer_dialog = Dialog(
             on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_sport_item_for_add_report)
         ),
         Button(
-            text=Const("📈 История прогресса"),
+            text=Const("📈 Записи"),
             id="progres_history",
             on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_sports_item)
         ),
@@ -239,8 +261,56 @@ trainer_dialog = Dialog(
 )
 
 
-
-
-# progress_history = Dialog(
-    
-# )
+progress_history = Dialog(
+    Window(
+        Const("👶 Выберите ребенка для просмотра истории прогресса."),
+        child_history_scroller,
+        Row(
+            PrevPage(scroll=child_history_scroller, text=Format("◀️")),
+            NextPage(scroll=child_history_scroller, text=Format("▶️")),
+            when=lambda data, *args: data.get("show_pager", False)
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back_menu",
+            on_click=exit_from_history
+        ),
+        state=ProgressHistory.history_menu,
+        getter=get_childs_btn
+    ),
+    Window(
+        Const("📅 Выберите месяц, за который хотите посмотреть историю."),
+        Group(
+            Select(
+                Format("{item[name]}"),
+                id="month_select",
+                items="months",
+                item_id_getter=lambda x: x["id"],
+                on_click=history_month_selected
+            ),
+            width=3
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back_menu",
+            on_click=lambda c, b, m: m.switch_to(ProgressHistory.history_menu)
+        ),
+        getter=months_getter,
+        state=ProgressHistory.select_month
+    ),
+    Window(
+        Format("{text}"),
+        DynamicMedia("photo"),
+        Row(
+            Button(text=Const("◀️"), id="prev", on_click=prev_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
+            Button(text=Const("▶️"), id="next", on_click=next_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back_menu",
+            on_click=lambda c, b, m: m.switch_to(state=ProgressHistory.select_month)
+        ),
+        state=ProgressHistory.child_history,
+        getter=get_current_history_item
+    )
+)

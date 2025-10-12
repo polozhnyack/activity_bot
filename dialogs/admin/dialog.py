@@ -35,6 +35,11 @@ admin_window = Dialog(
                 on_click=lambda c, b, m: m.switch_to(state=AdminState.role_select)
             ),
         ),
+        Button(
+            text=Const("📜 Смотреть историю"),
+            id="history",
+            on_click=lambda c, b, m: m.start(state=ProgressHistory.history_menu)
+        ),
         state=AdminState.admin_menu
     ),
     Window(
@@ -75,7 +80,6 @@ admin_window = Dialog(
         Const("Отправьте пользователя по кнопке 👇"),
         MessageInput(
             user_contact_handler,
-            # content_types=ContentType.USER_SHARED
         ),
         Button(
             text=Const("⬅️ Назад"),

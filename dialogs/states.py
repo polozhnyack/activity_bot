@@ -51,3 +51,9 @@ class AdminState(StatesGroup):
 
     role_select = State()
     user_select = State()
+
+
+class ProgressHistory(StatesGroup):
+    history_menu = State()
+    select_month = State()
+    child_history = State()

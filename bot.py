@@ -14,7 +14,7 @@ from middleware.session import DbSessionMiddleware
 
 from dialogs.main.handlers import router
 from dialogs.main.dialog import parent_reg, child_info_dialog
-from dialogs.trainer.dialog import trainer_dialog
+from dialogs.trainer.dialog import trainer_dialog, progress_history
 from dialogs.director.dialog import director_dialog
 from dialogs.admin.dialog import admin_window
 
@@ -50,6 +50,7 @@ async def main():
     dp.include_router(trainer_dialog)
     dp.include_router(director_dialog)
     dp.include_router(admin_window)
+    dp.include_router(progress_history)
 
     setup_dialogs(dp)
 

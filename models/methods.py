@@ -258,6 +258,36 @@ class ReportService:
         return reports
     
 
+    async def get_reports_by_child_and_month_sorted(
+        self,
+        child_id: str,
+        month: str,
+        status: ReportStatus | None = None,
+    ) -> list[Report]:
+        stmt = (
+            select(Report)
+            .where(Report.child_id == child_id, Report.month == month)
+            .options(
+                selectinload(Report.photos),
+                selectinload(Report.comments).joinedload(Comment.author),
+                joinedload(Report.child),
+            )
+            .order_by(Report.id.asc())
+        )
+
+        if status is not None:
+            stmt = stmt.where(Report.status == status)
+
+        result = await self.session.execute(stmt)
+        reports = result.scalars().all()
+
+        for r in reports:
+            await self.session.refresh(r, attribute_names=["comments", "photos"])
+
+        return reports
+
+    
+
     async def add_comment(self, report_id: int, author_id: int, text: str) -> Comment:
         result = await self.session.execute(
             select(Report)

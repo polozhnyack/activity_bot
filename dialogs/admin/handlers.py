@@ -140,9 +140,7 @@ async def on_role_selected(
 
 
 async def go_back_admin_menu(callback: CallbackQuery, button, dialog_manager: DialogManager):
-
     pupa = dialog_manager.dialog_data.get("pupa")
-
     if pupa:
         try:
             message = await callback.message.answer(
@@ -158,8 +156,6 @@ async def go_back_admin_menu(callback: CallbackQuery, button, dialog_manager: Di
             )
 
         except Exception as e:
-
-            print(e)
             message = await callback.message.answer(
                 "🔄",
                 reply_markup=ReplyKeyboardRemove()

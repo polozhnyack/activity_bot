@@ -79,6 +79,11 @@ director_dialog = Dialog(
             when=lambda data, *args: int(data.get("count_in_review", 0)) > 0,
             on_click=lambda c, b, m: m.switch_to(state=DirectorState.reports_child)
         ),
+        Button(
+            text=Const("📜 Смотреть историю"),
+            id="history",
+            on_click=lambda c, b, m: m.start(state=ProgressHistory.history_menu)
+        ),
         state=DirectorState.director_menu,
         getter=get_count_in_review
     ),

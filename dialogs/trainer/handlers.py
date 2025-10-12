@@ -30,6 +30,7 @@ async def back_to(
     else:
         await dialog_manager.back()
 
+
 async def month_selected(
     callback: CallbackQuery,
     widget: Select,
@@ -45,6 +46,49 @@ async def month_selected(
 
     await dialog_manager.switch_to(state=TrainerStates.select_child)
 
+
+
+async def history_month_selected(
+    callback: CallbackQuery,
+    widget: Select,
+    dialog_manager: DialogManager,
+    item_id: str,
+):
+    logger.debug(f"Вы выбрали месяц: {item_id}")
+
+    dialog_manager.dialog_data["selected_month"] = int(item_id)
+
+    logger.debug(dialog_manager.dialog_data)
+
+    year = datetime.now().year
+    month_str = f"{year}-{int(item_id):02d}" 
+
+    child_code = dialog_manager.dialog_data["child_code"]
+    report_service: ReportService = dialog_manager.middleware_data["ReportService"]
+
+    reports: list[Report] = await report_service.get_reports_by_child_and_month_sorted(
+        child_id=child_code,
+        month=month_str,
+        status=ReportStatus.approved
+    )
+
+    history_items = []
+    for report in reports:
+        for photo in report.photos:
+            history_items.append({
+                "photo_file_id": photo.file_id,
+                "text": report
+            })
+
+    logger.debug(history_items)
+
+    dialog_manager.dialog_data["history_items"] = history_items
+    dialog_manager.dialog_data["history_index"] = 0
+
+    await dialog_manager.switch_to(state=ProgressHistory.child_history)
+
+
+
 async def child_selected(
     callback: CallbackQuery,
     widget: Select,
@@ -56,6 +100,20 @@ async def child_selected(
     _, code = item_id.split("_")
     dialog_manager.dialog_data["child_code"] = code
     await dialog_manager.switch_to(state=TrainerStates.child_card)
+
+
+async def child_selected_history(
+    callback: CallbackQuery,
+    widget: Select,
+    dialog_manager: DialogManager,
+    item_id: str,
+):
+    logger.debug(f"Выбран ребенок: {item_id}")
+
+    _, code = item_id.split("_")
+    dialog_manager.dialog_data["child_code"] = code
+
+    await dialog_manager.switch_to(state=ProgressHistory.select_month)
 
 
 async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
@@ -101,7 +159,12 @@ async def next_history(callback: CallbackQuery, button, dialog_manager: DialogMa
     dialog_manager.dialog_data["history_index"] = min(
         dialog_manager.dialog_data["history_index"] + 1, len(items) - 1
     )
-    await dialog_manager.switch_to(state=TrainerStates.history_progress)
+
+    current_state = dialog_manager.current_context().state
+    if current_state == ProgressHistory.child_history:
+        await dialog_manager.switch_to(state=ProgressHistory.child_history)
+    else:
+        await dialog_manager.switch_to(state=TrainerStates.history_progress)
 
 
 async def prev_history(callback: CallbackQuery, button, dialog_manager: DialogManager):
@@ -112,7 +175,13 @@ async def prev_history(callback: CallbackQuery, button, dialog_manager: DialogMa
     dialog_manager.dialog_data["history_index"] = max(
         dialog_manager.dialog_data["history_index"] - 1, 0
     )
-    await dialog_manager.switch_to(state=TrainerStates.history_progress)
+
+    current_state = dialog_manager.current_context().state
+    if current_state == ProgressHistory.child_history:
+        await dialog_manager.switch_to(state=ProgressHistory.child_history)
+    else:
+        await dialog_manager.switch_to(state=TrainerStates.history_progress)
+
 
 
 async def on_exercise_selected(
@@ -321,3 +390,16 @@ async def on_confirm_close(callback: CallbackQuery, button, dialog_manager: Dial
         await callback.answer(result, show_alert=True)
 
     await dialog_manager.switch_to(state=TrainerStates.select_month)
+
+
+
+async def exit_from_history(callback: CallbackQuery, button, dialog_manager: DialogManager):
+    await dialog_manager.reset_stack()
+    user: User = await UserService.get_by_id(callback.from_user.id)
+    if user.role and user.role != UserRole.parent:
+        if user.role == UserRole.trainer:
+            await dialog_manager.start(state=TrainerStates.trainer_menu)
+        elif user.role == UserRole.director:
+            await dialog_manager.start(state=DirectorState.director_menu)
+        elif user.role == UserRole.admin:
+            await dialog_manager.start(state=AdminState.admin_menu)
