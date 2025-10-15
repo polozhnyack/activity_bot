@@ -16,6 +16,7 @@ from models.models import *
 from config import load_config
 from logger import logger
 
+
 router = Router()
 config = load_config()
 
@@ -54,15 +55,21 @@ async def command_start_process(
         child = await UserService.get_child_by_parent_id(
             parent_id=message.from_user.id
         )
-        await dialog_manager.start(
-            state=ChildInfo.start_info,
-            data={
-                "parent_id": message.from_user.id,
-                "child_code": child.code,
-                "child_name": child.full_name,
-                "child_birth_date": child.birth_date,
-            },
-        )
+        if child:
+            await dialog_manager.start(
+                state=ChildInfo.start_info,
+                data={
+                    "parent_id": message.from_user.id,
+                    "child_code": child.code,
+                    "child_name": child.full_name,
+                    "child_birth_date": child.birth_date,
+                },
+            )
+        else:
+            return await dialog_manager.start(
+                state=ParentRegistration.input_code,
+                mode=StartMode.RESET_STACK,
+            )
 
 
 
@@ -170,7 +177,7 @@ async def on_photo_input(message: Message, _: MessageInput, manager: DialogManag
         )
 
         await message.answer(f"✅ Фото сохранено!")
-        await manager.done()
+        await manager.switch_to(ChildInfo.select_month)
 
     else: 
         await message.answer(f"❌ <b>Произошла ошибка при сохранении фото!</b>\n\nПопробуйте повторить попытку позже.")

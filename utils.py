@@ -62,24 +62,30 @@ def format_chat_username(chat: Chat):
         return str(chat.id)
 
 
-async def resolve_file_paths_aiogram(bot: Bot, reports_data: dict, child_code: str, download_dir="downloads") -> dict:
+async def resolve_file_paths_aiogram(bot: Bot, child_service, reports_data: dict, child_code: str, download_dir="downloads") -> dict:
     os.makedirs(download_dir, exist_ok=True)
     new_data = {}
 
     for month, exercises in reports_data.items():
+        plans = await child_service.get_monthly_plan(child_id=child_code, month=month)
+        if not plans:
+            month_plan = "Планов на этот месяц не найдено"
+        else:
+            month_plan = plans[0].notes if plans[0].notes else "План пустой"
+
         new_data[month] = {}
+
         for exercise_name, photos in exercises.items():
+            if exercise_name == "Plan":
+                continue
+
             new_data[month][exercise_name] = []
             for photo in photos:
                 file_id = photo["file_id"]
-
                 file = await bot.get_file(file_id)
                 safe_file_id = re.sub(r'[^a-zA-Z0-9_]', '', file_id)
-
                 filename = f"{month}_{child_code}_{safe_file_id}.jpg"
-
                 file_path_local = os.path.join(download_dir, filename)
-                    
                 await bot.download_file(file.file_path, destination=file_path_local)
 
                 new_data[month][exercise_name].append({
@@ -87,7 +93,10 @@ async def resolve_file_paths_aiogram(bot: Bot, reports_data: dict, child_code: s
                     "comments": photo["comments"]
                 })
 
+        new_data[month]["Plan"] = month_plan
+
     return new_data
+
 
 
 def render_html_to_pdf(html_content: str, output_path: str = "report.pdf"):
@@ -116,68 +125,67 @@ def html_code_creator(block: str) -> str:
             margin: 0;
             size: A3 landscape;
         }}
-        body {{
-            font-family: Arial, sans-serif;
+        html, body {{
             margin: 0;
-            background-color: #f5f7ff;
-            transform-origin: top left;
-        }}
-
-        .progress-journal-wrapper {{
+            padding: 0;
             width: 42cm;
             height: 29.7cm;
+            font-family: Arial, sans-serif;
+            background-color: #f5f7ff;
+        }}
+        .progress-journal-wrapper {{
+            width: 100%;
+            height: 100%;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start; /* прижать к верху листа */
         }}
-
-        /* таблица теперь точно под формат A3 */
         .progress-journal {{
             border-collapse: collapse;
+            width: 42cm;
+            height: 29.7cm;
+            table-layout: fixed;
             background-color: white;
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-            table-layout: fixed;
-            width: 42cm;
-            height: 29.7cm;
-            box-sizing: border-box;
-        }}
 
+            page-break-inside: auto;
+        }}
         .progress-journal th:first-child,
         .progress-journal td:first-child {{
-            width: 3.5cm; /* или попробуй 5cm, если хочешь еще уже */
+            width: 3.5cm;
             background-color: #2f45f0;
             color: white;
             font-weight: bold;
         }}
-
         .progress-journal th,
         .progress-journal td {{
             border: 1px solid #ddd;
-            padding: 4px;
             text-align: center;
             vertical-align: middle;
             box-sizing: border-box;
+            height: calc(29.7cm / 7); /* ровно 7 строк */
+            padding: 0;
+        }}
 
-            /* теперь таблица реально ровно делится на 13×7 */
 
-            height: calc(29.7cm / 7);
+        .progress-journal tr {{
+            page-break-inside: avoid; /* НЕ разрывать строку */
+            page-break-after: auto;    /* Разрыв после строки разрешен */
+        }}
+
+        .progress-journal thead {{
+            display: table-header-group; /* шапка повторяется на новых страницах */
+        }}
+
+        .progress-journal tfoot {{
+            display: table-footer-group; /* если нужен футер */
         }}
 
         .progress-journal th:not(:first-child),
         .progress-journal td:not(:first-child) {{
-            width: calc((42cm - 6cm) / 12); /* оставшееся место равномерно */
-        }}
-
-        /* остальное без изменений */
-        .exercise-name {{
-            font-weight: bold;
-            background-color: #2f45f0;
-            color: white;
-            font-size: 18px;
-            padding: 6px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            width: calc((42cm - 3.5cm) / 12); /* 12 столбцов */
         }}
         .exercise-name-inner {{
             display: flex;
@@ -186,36 +194,41 @@ def html_code_creator(block: str) -> str:
             height: 100%;
             text-align: center;
             flex-direction: column;
+            font-size: 16px;
+            padding: 4px;
         }}
-
         .exercise-details img {{
             width: 100%;
             height: auto;
             object-fit: cover;
             display: block;
-            margin-bottom: 4px;
-            border-radius: 9px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 2px;
+            border-radius: 6px;
         }}
-
         .months-row {{
             background: linear-gradient(135deg, #2f45f0, #4facfe);
-            color: #ffffff;
+            color: #fff;
+            font-weight: bold;
         }}
         .months-row .month {{
+            font-size: 14px;
+            padding: 2px;
+        }}
+        .plan-cell {{
             font-weight: bold;
-            font-size: 18px;
-            text-align: center;
-            padding: 10px;
+            color: #2f45f0;
         }}
     </style>
     </head>
     <body>
-        {block}
+        <div class="progress-journal-wrapper">
+            {block}
+        </div>
     </body>
     </html>
     """
     return html
+
 
 
 
@@ -227,53 +240,43 @@ def generate_progress_html_vertical(data: dict, child_name: str = "ФИ ребё
     }
 
     html_parts = []
-
-    all_exercises = set()
-    for exercises in data.values():
-        all_exercises.update(exercises.keys())
-    all_exercises = sorted(all_exercises)
-
     html_parts.append('<div class="month-block"><div class="progress-journal-wrapper">')
     html_parts.append('<table class="progress-journal">')
 
-    # Заголовок (первая строка с месяцами)
+    # Заголовок
     html_parts.append(
         f'<tr class="months-row">'
-        f'<td class="exercise-name">'
+        f'<th class="exercise-name">'
         f'<div class="journal-title">ЖУРНАЛ ПРОГРЕССА</div>'
         f'<div class="child-name">{child_name}</div>'
-        f'</td>'
+        f'</th>'
     )
 
-    # Добавляем 12 месяцев (всегда)
     for i in range(1, 13):
         month_str = f"{i:02d}"
         month_name = months_ru[month_str].capitalize()
-        html_parts.append(f'<td class="month">{month_name}</td>')
-
+        html_parts.append(f'<th class="month">{month_name}</th>')
     html_parts.append('</tr>')
 
-    # Каждая строка — упражнение
-    for exercise_name in all_exercises:
-        html_parts.append(
-            f'<tr><td class="exercise-name"><div class="exercise-name-inner">{exercise_name}</div></td>'
-        )
+    # Собираем все упражнения, кроме "Plan"
+    all_exercises = set()
+    for exercises in data.values():
+        all_exercises.update(k for k in exercises.keys() if k != "Plan")
+    all_exercises = sorted(all_exercises)
 
-        # Добавляем 12 ячеек (по месяцам)
+    # Рисуем упражнения
+    for exercise_name in all_exercises:
+        html_parts.append(f'<tr><td class="exercise-name"><div class="exercise-name-inner">{exercise_name}</div></td>')
+
         for i in range(1, 13):
             month_str = f"{i:02d}"
-
-            # Ищем год-месяц в data (любой год, где есть такой месяц)
-            # например, "2025-10"
-            matching_key = next(
-                (k for k in data.keys() if k.endswith(f"-{month_str}")),
-                None
-            )
+            matching_key = next((k for k in data.keys() if k.endswith(f"-{month_str}")), None)
 
             if matching_key:
                 exercises = data[matching_key]
                 files = exercises.get(exercise_name, [])
-                if files:
+
+                if isinstance(files, list) and files:
                     cell_html = ""
                     for f in files:
                         img_src = f.get("file_path", "")
@@ -288,10 +291,20 @@ def generate_progress_html_vertical(data: dict, child_name: str = "ФИ ребё
                 else:
                     html_parts.append('<td></td>')
             else:
-                # если в этом месяце нет данных
                 html_parts.append('<td></td>')
 
         html_parts.append('</tr>')
+
+    html_parts.append('<tr><td class="exercise-name"><div class="exercise-name-inner">План</div></td>')
+    for i in range(1, 13):
+        month_str = f"{i:02d}"
+        matching_key = next((k for k in data.keys() if k.endswith(f"-{month_str}")), None)
+        if matching_key:
+            plan_text = data[matching_key].get("Plan", "")
+            html_parts.append(f'<td class="plan-cell">{plan_text}</td>')
+        else:
+            html_parts.append('<td></td>')
+    html_parts.append('</tr>')
 
     html_parts.append('</table></div></div>')
     return "\n".join(html_parts)

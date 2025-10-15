@@ -111,15 +111,20 @@ trainer_dialog = Dialog(
             "📅 Дата рождения: {birth_date}\n"
             "🆔 Код: {code}\n\n"
 
-            # "👨‍👩‍👧 Родитель: {parent_name}\n\n"
-
             "📝 Записей за месяц: {reports_count}\n"
-            "📌 Последняя запись: {last_report_date}"
+            "📌 Последняя запись: {last_report_date}\n\n"
+
+            "📅 План на месяц:\n\n{month_plan}"
         ),
         Button(
             text=Const("➕ Добавить запись"),
             id="trainer_add_report",
             on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_sport_item_for_add_report)
+        ),
+        Button(
+            text=Const("📊 Добавить план"),
+            id="add_plan_month",
+            on_click=lambda c, b, m: m.switch_to(state=TrainerStates.plane_input)
         ),
         Button(
             text=Const("📈 Записи"),
@@ -184,6 +189,11 @@ trainer_dialog = Dialog(
             "📸 <b>Пожалуйста, отправьте фото — с подписью или без неё</b>\n\n"
             "Вы можете добавить комментарий к фото позже, если захотите."
         ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back_menu",
+            on_click=lambda c, b, m: m.switch_to(TrainerStates.select_sport_item_for_add_report)
+        ),
         MessageInput(
             select_sport_item_for_add_report,
             content_types=ContentType.PHOTO
@@ -218,7 +228,7 @@ trainer_dialog = Dialog(
         Button(
             text=Const("⬅️ Назад"),
             id="back_menu",
-            on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_sport_item_for_add_report)
+            on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_sports_item)
         ),
         state=TrainerStates.history_progress,
         getter=get_current_history_item
@@ -258,6 +268,21 @@ trainer_dialog = Dialog(
         ),
         state=TrainerStates.confidence_window
     ),
+    Window(
+        Const(
+            "📝 Введите план на месяц"
+        ),
+        MessageInput(
+            plane_input_handler,
+            content_types=ContentType.TEXT
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back_menu",
+            on_click=lambda c, b, m: m.switch_to(TrainerStates.child_card)
+        ),
+        state=TrainerStates.plane_input
+    )
 )
 
 

@@ -76,12 +76,23 @@ async def get_child_data(dialog_manager: DialogManager, **kwargs):
     )
     child: Child = await child_servise.get_by_code(child_code)
 
+    plans: MonthlyPlan = await child_servise.get_monthly_plan(
+        child_id=child_code,
+        month=month_str
+    )
+
+    if not plans:
+        month_plan = "Планов на этот месяц не найдено"
+    else:
+        month_plan = plans[0].notes if plans[0].notes else "План пустой"
+
     return {
         "reports_count": len(reports_info["reports"]),
         "last_report_date": reports_info["last_report_date"],
         "full_name": child.full_name,
         "birth_date": child.birth_date.strftime("%d.%m.%Y") if child.birth_date else "не указано",
-        "code": child.code
+        "code": child.code,
+        "month_plan": month_plan
     }
 
 

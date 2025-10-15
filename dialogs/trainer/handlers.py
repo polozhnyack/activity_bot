@@ -395,7 +395,9 @@ async def on_confirm_close(callback: CallbackQuery, button, dialog_manager: Dial
 
 async def exit_from_history(callback: CallbackQuery, button, dialog_manager: DialogManager):
     await dialog_manager.reset_stack()
-    user: User = await UserService.get_by_id(callback.from_user.id)
+
+    user_service: UserService = dialog_manager.middleware_data["UserService"]
+    user: User = await user_service.get_by_id(user_id=callback.from_user.id)
     if user.role and user.role != UserRole.parent:
         if user.role == UserRole.trainer:
             await dialog_manager.start(state=TrainerStates.trainer_menu)
@@ -403,3 +405,27 @@ async def exit_from_history(callback: CallbackQuery, button, dialog_manager: Dia
             await dialog_manager.start(state=DirectorState.director_menu)
         elif user.role == UserRole.admin:
             await dialog_manager.start(state=AdminState.admin_menu)
+
+
+async def plane_input_handler(message: Message, _: MessageInput, manager: DialogManager):
+
+    plan = message.text.strip()
+    child_service: ChildService = manager.middleware_data["ChildService"]
+
+    month = manager.dialog_data["selected_month"]
+    child_id = manager.dialog_data["child_code"]
+
+    year = datetime.now().year
+    month_str = f"{year}-{month:02d}" 
+
+    try:
+        await child_service.set_monthly_plan(
+            child_id=child_id,
+            month=month_str,
+            notes=plan
+        )
+        await message.answer("✅ План на месяц успешно добавлен.")
+    except Exception as e:
+        logger.error(f"Не удалось добавить план на месяц.")
+
+    await manager.switch_to(state=TrainerStates.child_card)

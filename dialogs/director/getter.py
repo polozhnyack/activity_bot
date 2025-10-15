@@ -58,6 +58,17 @@ async def get_report_card(dialog_manager: DialogManager, **kwargs):
 
     logger.debug(f"{dialog_manager.dialog_data}")
 
+
+    plans: MonthlyPlan = await child_service.get_monthly_plan(
+        child_id=child_code,
+        month=selected_month
+    )
+
+    if not plans:
+        month_plan = "Планов на этот месяц не найдено"
+    else:
+        month_plan = plans[0].notes if plans[0].notes else "План пустой"
+
     return {
         "date": selected_month or "-",
         "full_name": child.full_name or "-",
@@ -68,6 +79,8 @@ async def get_report_card(dialog_manager: DialogManager, **kwargs):
         "count_rows": len(reports),
 
         "months": months_btn,
+
+        "month_plan": month_plan
     }
 
 
@@ -113,14 +126,15 @@ async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
 
     report: Report = item["text"]
 
+    month_plan: str = item.get("month_plan", "План не найден")
+
     dialog_manager.dialog_data["selected_report"] = int(report.id)
 
     text = (
         f"Месяц - {report.month}\n"
-        f"Загружено: - {report.created_at}\n"
-        f"Последнее обновление - {report.updated_at}\n\n"
         f"<b>Комментарий:</b>\n\n"
-        f"{report.comments[-1].text if report.comments else "Нет комментариев"}"
+        f"{report.comments[-1].text if report.comments else "Нет комментариев"}\n\n"
+        f"<b>План на месяц:</b>\n{month_plan}"
     )
 
     logger.debug(text)
@@ -128,5 +142,5 @@ async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
     return {
         "has_comment": bool(report.comments),
         "text": text, 
-        "photo": media
+        "photo": media,
         }

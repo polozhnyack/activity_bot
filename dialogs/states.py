@@ -25,6 +25,8 @@ class TrainerStates(StatesGroup):
 
     confidence_window = State()
 
+    plane_input = State()
+
 
 class DirectorState(StatesGroup):
     director_menu = State()

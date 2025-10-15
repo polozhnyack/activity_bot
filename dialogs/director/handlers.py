@@ -14,7 +14,7 @@ from models.models import *
 from config import load_config
 from logger import logger
 from dialogs.trainer.getter import get_childs_btn
-from utils import resolve_file_paths_aiogram, generate_progress_html_vertical, render_html_to_pdf, html_code_creator
+from utils import resolve_file_paths_aiogram, generate_progress_html_vertical, render_html_to_pdf, html_code_creator, remove_files
 
 import json
 
@@ -83,6 +83,7 @@ async def on_exercise_selected(
 
     if widget.widget_id == "exercise_select":
         report_service: ReportService = dialog_manager.middleware_data["ReportService"]
+        child_service: ChildService = dialog_manager.middleware_data["ChildService"]
 
         reports: list[Report] = await report_service.get_reports_by_child_and_month(
             child_id=child_code,
@@ -90,6 +91,17 @@ async def on_exercise_selected(
             exercise_id=exercise_id,
             status=ReportStatus.in_review
         )
+
+        plans: MonthlyPlan = await child_service.get_monthly_plan(
+            child_id=child_code,
+            month=month_str
+        )
+
+        if not plans:
+            month_plan = "Планов на этот месяц не найдено"
+        else:
+            month_plan = plans[0].notes if plans[0].notes else "План пустой"
+
 
         reports.sort(key=lambda r: r.created_at)
         logger.debug(reports)
@@ -99,7 +111,8 @@ async def on_exercise_selected(
             for photo in report.photos:
                 history_items.append({
                     "photo_file_id": photo.file_id,
-                    "text": report
+                    "text": report,
+                    "month_plan": month_plan
                 })
 
         logger.debug(history_items)
@@ -154,6 +167,7 @@ async def approve_report(callback: CallbackQuery, button, dialog_manager: Dialog
     report_data = await resolve_file_paths_aiogram(
         child_code=child_code,
         bot=dialog_manager.event.bot,
+        child_service=dialog_manager.middleware_data["ChildService"],
         reports_data=grouped,
         download_dir="temp"
     )
@@ -181,6 +195,11 @@ async def approve_report(callback: CallbackQuery, button, dialog_manager: Dialog
         await callback.message.answer("✅ Отчёт успешно отправлен родителю.")
     except Exception as e:
         await callback.message.answer(f"❌ Не удалось отправить отчёт родителю.\nОшибка: {e}")
+
+    try:
+        remove_files(report_data)
+    except Exception as e:
+        logger.error(f"Ошибка удаления файлов: {e}")
     
     await dialog_manager.done()
 

@@ -131,6 +131,8 @@ class ChildService:
 
         await self.session.execute(delete(Report).where(Report.child_id == child_code))
 
+        await self.session.execute(delete(MonthlyPlan).where(MonthlyPlan.child_id == child_code))
+
         await self.session.delete(child)
 
         await self.session.commit()
@@ -146,6 +148,34 @@ class ChildService:
         )
         result = await self.session.scalars(stmt)
         return result.all()
+
+
+    async def get_monthly_plan(self, child_id: str, month: str | None = None):
+        query = select(MonthlyPlan).where(MonthlyPlan.child_id == child_id)
+        if month:
+            query = query.where(MonthlyPlan.month == month)
+
+        result = await self.session.execute(query)
+        plans = result.scalars().all()
+        return plans
+    
+
+    async def set_monthly_plan(self, child_id: str, month: str, notes: str):
+        query = await self.session.execute(
+            select(MonthlyPlan).where(MonthlyPlan.child_id == child_id, MonthlyPlan.month == month)
+        )
+        plan = query.scalar_one_or_none()
+
+        if plan:
+            plan.notes = notes
+            plan.updated_at = datetime.now()
+        else:
+            plan = MonthlyPlan(child_id=child_id, month=month, notes=notes)
+            self.session.add(plan)
+
+        await self.session.commit()
+        return plan
+
             
 
 
@@ -363,7 +393,11 @@ class ReportService:
         result = await self.session.execute(
             select(Report)
             .options(joinedload(Report.photos).joinedload(Photo.exercise))
-            .where(Report.child_id == child_id, Report.month == month)
+            .where(
+                Report.child_id == child_id,
+                Report.month == month,
+                Report.status == ReportStatus.draft
+                )
         )
         reports = result.unique().scalars().all()
 

@@ -40,6 +40,11 @@ admin_window = Dialog(
             id="history",
             on_click=lambda c, b, m: m.start(state=ProgressHistory.history_menu)
         ),
+        Button(
+            text=Const("🔍 Список кодов детей"),
+            id="child_codes",
+            on_click=export_children_to_excel
+        ),
         state=AdminState.admin_menu
     ),
     Window(

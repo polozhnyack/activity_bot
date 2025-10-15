@@ -110,7 +110,7 @@ director_dialog = Dialog(
             "🆔 <b>Код ребёнка:</b> {child_code}\n\n"
             "🏋️ <b>Тренер:</b> {trainer_username}\n"
             "👨‍👩‍👧 <b>Родитель:</b> {parent_username}\n\n"
-            "📷 <b>Всего записей:</b> {count_rows}"
+            "📅 <b>План на месяц</b> \n\n{month_plan}"
         ),
         months_select,
         Button(

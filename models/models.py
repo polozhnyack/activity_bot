@@ -24,7 +24,6 @@ class ReportStatus(enum.Enum):
     rejected = "rejected"
 
 # --- Models ---
-
 class User(Base):
     __tablename__ = "users"
 
@@ -103,3 +102,14 @@ class Exercise(Base):
     __tablename__ = "exercises"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), unique=True)
+
+
+class MonthlyPlan(Base):
+    __tablename__ = "monthly_plans"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    child_id: Mapped[str] = mapped_column(ForeignKey("children.code"), nullable=False)
+    month: Mapped[str] = mapped_column(String(7), nullable=False)
+    notes: Mapped[str] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(default=datetime.now, onupdate=datetime.now)

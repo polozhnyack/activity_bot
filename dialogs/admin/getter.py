@@ -26,7 +26,7 @@ async def get_roles_data(dialog_manager: DialogManager, **kwargs):
         "roles": [
             (role_names[role.value], role.value)
             for role in UserRole
-            if role.value != "admin"
+            # if role.value != "admin"
         ],
     }
 

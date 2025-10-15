@@ -1,6 +1,6 @@
 from aiogram import Router
 from aiogram_dialog import DialogManager
-from aiogram.types import Message, CallbackQuery, Chat
+from aiogram.types import Message, CallbackQuery, Chat, FSInputFile
 from aiogram.types import ContentType, ReplyKeyboardMarkup, KeyboardButton, KeyboardButtonRequestUser, ReplyKeyboardRemove
 
 from aiogram_dialog.widgets.kbd import Select
@@ -10,8 +10,12 @@ from aiogram_dialog.widgets.input import MessageInput
 
 from models.methods import UserService, ChildService
 from models.models import *
-from config import load_config
 from logger import logger
+
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill
+from sqlalchemy import select
+from datetime import datetime
 
 
 async def creator_child(callback: CallbackQuery, button, dialog_manager: DialogManager):
@@ -165,3 +169,64 @@ async def go_back_admin_menu(callback: CallbackQuery, button, dialog_manager: Di
     dialog_manager.dialog_data.clear()
     await dialog_manager.switch_to(state=AdminState.admin_menu)
 
+
+
+
+
+async def export_children_to_excel(callback: CallbackQuery, button, dialog_manager: DialogManager):
+    """Экспортирует всех детей в Excel с полями code, full_name, birth_date."""
+    session = dialog_manager.middleware_data["session"]
+    userService: UserService = dialog_manager.middleware_data["UserService"]
+
+    result = await session.execute(
+        select(Child.code, Child.full_name, Child.birth_date)
+    )
+    children = result.all()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Дети"
+
+    headers = ["Код ребёнка", "ФИО", "Дата рождения"]
+    ws.append(headers)
+
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    ws.row_dimensions[1].height = 25
+
+    for code, full_name, birth_date in children:
+        ws.append([
+            code,
+            full_name or "—",
+            birth_date.strftime("%d.%m.%Y") if birth_date else "—"
+        ])
+
+    center_alignment = Alignment(horizontal="center", vertical="center")
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+        for cell in row:
+            cell.alignment = center_alignment
+
+    for column_cells in ws.columns:
+        length = max(len(str(cell.value or "")) for cell in column_cells)
+        adjusted_width = length + 2
+        ws.column_dimensions[column_cells[0].column_letter].width = adjusted_width
+
+    filename = f"Таблица_кодов_{datetime.now().strftime('%d_%m_%Y')}.xlsx"
+    wb.save(filename)
+
+    user: User = await userService.get_by_id(callback.from_user.id)
+
+    if user.role == UserRole.admin:
+        await callback.bot.send_document(
+            chat_id=callback.from_user.id,
+            document=FSInputFile(path=filename),
+            caption=f"<b>Таблица кодов всех детей</b>",
+            parse_mode="HTML"
+        )
+    return 
