@@ -186,15 +186,29 @@ async def approve_report(callback: CallbackQuery, button, dialog_manager: Dialog
     pdf_path = render_html_to_pdf(full_html, f"{child_name_clean}.pdf")
 
     try:
+        try:
+            await callback.bot.send_document(
+                chat_id=child.parent_id,
+                document=FSInputFile(path=pdf_path),
+                caption=f"<b>📄 Отчёт по ученику:</b> {child.full_name}",
+                parse_mode="HTML"
+            )
+            parent_status = "✅ Отчет родителю успешно отправлен."
+        except Exception as e:
+            parent_status = f"⚠️ Не удалось отправить отчет родителю: {e}"
+
         await callback.bot.send_document(
-            chat_id=child.parent_id,
+            chat_id=callback.from_user.id,
             document=FSInputFile(path=pdf_path),
-            caption=f"<b>📄 Отчёт по ученику:</b> {child.full_name}",
+            caption=f"<b>📄 Отчёт по ученику:</b> {child.full_name}\n"
+                    f"(Копия для вас)",
             parse_mode="HTML"
         )
-        await callback.message.answer("✅ Отчёт успешно отправлен родителю.")
+
+        await callback.message.answer(f"{parent_status}\n📨 Копия отчёта отправлена вам.")
+
     except Exception as e:
-        await callback.message.answer(f"❌ Не удалось отправить отчёт родителю.\nОшибка: {e}")
+        await callback.message.answer(f"❌ Ошибка при отправке отчёта.\n{e}")
 
     try:
         remove_files(report_data)

@@ -68,11 +68,11 @@ director_dialog = Dialog(
             "• утверждать отчёты (формируется PDF и отправляется родителю);\n"
             "• отклонять отчёты, отправляя их тренеру на доработку."
         ),
-        Button(
-            text=Const("📊 Текущие данные"), 
-            id="start", 
-            on_click=lambda c, b, m: m.start(state=TrainerStates.select_month)
-        ),
+        # Button(
+        #     text=Const("📊 Текущие данные"), 
+        #     id="start", 
+        #     on_click=lambda c, b, m: m.start(state=TrainerStates.select_month)
+        # ),
         Button(
             text=Format("📝 Ждут проверки: {count_in_review}"),
             id="In_review",
@@ -133,7 +133,8 @@ director_dialog = Dialog(
         ),
         Button(
             text=Const("⬅️ Назад"),
-            id="back"
+            id="back",
+            on_click=lambda c, b, m: m.switch_to(state=DirectorState.reports_child)
         ),
         state=DirectorState.report,
         getter=get_report_card,

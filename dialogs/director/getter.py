@@ -114,6 +114,8 @@ async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
     items = dialog_manager.dialog_data.get("history_items", [])
     index = dialog_manager.dialog_data.get("history_index", 0)
 
+    ex_service: ExerciseService = dialog_manager.middleware_data["ExerciseService"]
+
     if not items:
         return {"text": "Нет данных", "photo": None}
 
@@ -130,11 +132,15 @@ async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
 
     dialog_manager.dialog_data["selected_report"] = int(report.id)
 
+    exercise_name = "-"
+    if report.photos and report.photos[0].exercise_id:
+        exercise_name = await ex_service.get_exercise_name_by_id(report.photos[0].exercise_id)
+
     text = (
-        f"Месяц - {report.month}\n"
-        f"<b>Комментарий:</b>\n\n"
-        f"{report.comments[-1].text if report.comments else "Нет комментариев"}\n\n"
-        f"<b>План на месяц:</b>\n{month_plan}"
+        f"📅 <b>Отчёт за:</b> {report.month}\n"
+        f"🏋️‍♂️ <b>Упражнение:</b> {exercise_name or 'Не указано'}\n\n"
+        f"💬 <b>Комментарий тренера:</b>\n"
+        f"{report.comments[-1].text if report.comments else 'Нет комментариев'}"
     )
 
     logger.debug(text)

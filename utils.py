@@ -30,6 +30,21 @@ def remove_files(data_dict):
                         logger.error(f"Не удалось удалить {file_path}: {e}")
 
 
+def delete_file(file_path: str) -> bool:
+    """
+    Удаляет файл по указанному пути.
+    Возвращает True, если файл был удалён, и False, если его не существовало.
+    """
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            return True
+        return False
+    except Exception as e:
+        print(f"Ошибка при удалении файла {file_path}: {e}")
+        return False
+
+
 def get_month_list(year: int = None) -> List[str]:
     """
     Возвращает список месяцев в формате YYYY.MM

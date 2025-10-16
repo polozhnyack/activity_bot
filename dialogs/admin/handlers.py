@@ -17,6 +17,8 @@ from openpyxl.styles import Font, Alignment, PatternFill
 from sqlalchemy import select
 from datetime import datetime
 
+from utils import delete_file
+
 
 async def creator_child(callback: CallbackQuery, button, dialog_manager: DialogManager):
     params = callback.data.split("_")
@@ -229,4 +231,6 @@ async def export_children_to_excel(callback: CallbackQuery, button, dialog_manag
             caption=f"<b>Таблица кодов всех детей</b>",
             parse_mode="HTML"
         )
+
+        delete_file(filename)
     return 

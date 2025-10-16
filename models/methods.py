@@ -418,7 +418,8 @@ class ReportService:
                 return f"❌ Фото в отчёте {report.id} не привязано к упражнению."
 
             if photo.exercise_id in seen_exercises:
-                return f"❌ Найден дубликат упражнения {photo.exercise.name} в разных отчётах."
+                return f"❌ Найдено больше одного фото для упражнения '{photo.exercise.name}'. Допускается только одно."
+            
             seen_exercises.add(photo.exercise_id)
 
         await self.session.execute(
