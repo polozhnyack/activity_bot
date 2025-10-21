@@ -53,9 +53,16 @@ async def child_handler(
         except ValueError:
             await message.answer("❌ Неверный формат даты. Используйте ДД.MM.ГГГГ")
             return
+        
+        dialog_manager.dialog_data.update(
+            full_name=full_name,
+            birth_date=birth_date
+        )
 
-        child = await child_service.create(full_name=full_name, birth_date=birth_date)
-        await message.answer(f"✅ Ребёнок создан: {child.full_name} ({child.code})")
+        # child = await child_service.create(full_name=full_name, birth_date=birth_date)
+        # await message.answer(f"✅ Ребёнок создан: {child.full_name} ({child.code})")
+
+        await dialog_manager.switch_to(AdminState.select_child_level)
 
     elif param == "delete":
         child_code = input_text
@@ -65,7 +72,33 @@ async def child_handler(
         else:
             await message.answer(f"❌ Ребёнок {child_code} не найден")
 
-    await dialog_manager.switch_to(AdminState.admin_menu)
+        await dialog_manager.switch_to(AdminState.admin_menu)
+
+
+
+async def on_level_selected(
+    callback: CallbackQuery,
+    widget,
+    dialog_manager: DialogManager,
+    item_id: str
+):
+    level_id = int(item_id)
+    dialog_manager.dialog_data["level_id"] = level_id
+
+    full_name = dialog_manager.dialog_data.get("full_name")
+    birth_date = dialog_manager.dialog_data.get("birth_date")
+
+    child_service: ChildService = dialog_manager.middleware_data["ChildService"]
+
+    child = await child_service.create(
+        full_name=full_name,
+        birth_date=birth_date,
+        level_id=level_id
+    )
+
+    await callback.message.answer(f"✅ Ребёнок {child.full_name} ({child.code}) создан")
+    await dialog_manager.start(AdminState.admin_menu)
+
 
 
 

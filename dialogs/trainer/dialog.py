@@ -111,21 +111,23 @@ trainer_dialog = Dialog(
             "📅 Дата рождения: {birth_date}\n"
             "🆔 Код: {code}\n\n"
 
+            "🏆 <b>Уровень:</b> {level}\n\n"
+
             "📝 Записей за месяц: {reports_count}\n"
             "📌 Последняя запись: {last_report_date}\n\n"
 
-            "📅 План на месяц:\n\n{month_plan}"
+            # "📅 План на месяц:\n\n{month_plan}"
         ),
         Button(
             text=Const("➕ Добавить запись"),
             id="trainer_add_report",
             on_click=lambda c, b, m: m.switch_to(state=TrainerStates.select_sport_item_for_add_report)
         ),
-        Button(
-            text=Const("📊 Добавить план"),
-            id="add_plan_month",
-            on_click=lambda c, b, m: m.switch_to(state=TrainerStates.plane_input)
-        ),
+        # Button(
+        #     text=Const("📊 Добавить план"),
+        #     id="add_plan_month",
+        #     on_click=lambda c, b, m: m.switch_to(state=TrainerStates.plane_input)
+        # ),
         Button(
             text=Const("📈 Записи"),
             id="progres_history",

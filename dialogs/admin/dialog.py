@@ -62,6 +62,26 @@ admin_window = Dialog(
         getter=child_create_delete_getter
     ),
     Window(
+        Const("🏆 Выберите уровень подготовки ребенка"),
+        Group(
+            Select(
+                Format("{item[0]}"),
+                id="select_level",
+                item_id_getter=lambda item: item[1],
+                items="levels_list",
+                on_click=on_level_selected
+            ),
+            width=1
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back",
+            on_click=lambda c, b, m: m.switch_to(state=AdminState.child_create_or_delete),
+        ),
+        state=AdminState.select_child_level,
+        getter=levels_getter
+    ),
+    Window(
         Format("{role_editor_text}"),
         Group(
             Select(

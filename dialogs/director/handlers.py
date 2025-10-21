@@ -92,15 +92,15 @@ async def on_exercise_selected(
             status=ReportStatus.in_review
         )
 
-        plans: MonthlyPlan = await child_service.get_monthly_plan(
-            child_id=child_code,
-            month=month_str
-        )
+        # plans: MonthlyPlan = await child_service.get_monthly_plan(
+        #     child_id=child_code,
+        #     month=month_str
+        # )
 
-        if not plans:
-            month_plan = "Планов на этот месяц не найдено"
-        else:
-            month_plan = plans[0].notes if plans[0].notes else "План пустой"
+        # if not plans:
+        #     month_plan = "Планов на этот месяц не найдено"
+        # else:
+        #     month_plan = plans[0].notes if plans[0].notes else "План пустой"
 
 
         reports.sort(key=lambda r: r.created_at)
@@ -112,7 +112,7 @@ async def on_exercise_selected(
                 history_items.append({
                     "photo_file_id": photo.file_id,
                     "text": report,
-                    "month_plan": month_plan
+                    # "month_plan": month_plan
                 })
 
         logger.debug(history_items)
@@ -153,7 +153,15 @@ async def approve_report(callback: CallbackQuery, button, dialog_manager: Dialog
     child_code = dialog_manager.dialog_data.get("child_code")
     selected_month = dialog_manager.dialog_data.get("selected_month")
 
-    logger.debug(f"Подтверждение отчета для ребенка {child_code} за месяц {selected_month}")
+    logger.debug(f"Подтверждение отчетов для ребенка {child_code} за месяц {selected_month}")
+
+    try:
+        await report_service.approve_reports_by_child_and_month(
+            child_code=child_code,
+            selected_month=selected_month
+        )
+    except Exception as e:
+        logger.warning(f"Ошибка при утверждении отчетов для child_code={child_code}, month={selected_month}")
 
     grouped = await report_service.get_child_reports_json(child_code)
 
@@ -216,7 +224,6 @@ async def approve_report(callback: CallbackQuery, button, dialog_manager: Dialog
         logger.error(f"Ошибка удаления файлов: {e}")
     
     await dialog_manager.done()
-
 
 
 async def reject_report(callback: CallbackQuery, button, dialog_manager: DialogManager):

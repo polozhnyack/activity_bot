@@ -9,7 +9,7 @@ from aiogram_dialog import setup_dialogs
 
 from logger import logger
 
-from middleware.session import DbSessionMiddleware
+from middleware.session import DbSessionMiddleware, UpdateLoggerMiddleware
 
 
 from dialogs.main.handlers import router
@@ -42,6 +42,8 @@ async def main():
 
     dp.update.middleware(DbSessionMiddleware(session_pool = sessionmaker))
     dp.callback_query.middleware(CallbackAnswerMiddleware())
+
+    dp.update.outer_middleware(UpdateLoggerMiddleware())
 
     dp.include_router(router)
     dp.include_router(parent_reg)

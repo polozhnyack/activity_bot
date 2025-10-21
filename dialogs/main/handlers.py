@@ -177,7 +177,7 @@ async def on_photo_input(message: Message, _: MessageInput, manager: DialogManag
         )
 
         await message.answer(f"✅ Фото сохранено!")
-        await manager.switch_to(ChildInfo.select_month)
+        await manager.switch_to(ChildInfo.start_info)
 
     else: 
         await message.answer(f"❌ <b>Произошла ошибка при сохранении фото!</b>\n\nПопробуйте повторить попытку позже.")

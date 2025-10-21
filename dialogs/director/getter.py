@@ -59,15 +59,15 @@ async def get_report_card(dialog_manager: DialogManager, **kwargs):
     logger.debug(f"{dialog_manager.dialog_data}")
 
 
-    plans: MonthlyPlan = await child_service.get_monthly_plan(
-        child_id=child_code,
-        month=selected_month
-    )
+    # plans: MonthlyPlan = await child_service.get_monthly_plan(
+    #     child_id=child_code,
+    #     month=selected_month
+    # )
 
-    if not plans:
-        month_plan = "Планов на этот месяц не найдено"
-    else:
-        month_plan = plans[0].notes if plans[0].notes else "План пустой"
+    # if not plans:
+    #     month_plan = "Планов на этот месяц не найдено"
+    # else:
+    #     month_plan = plans[0].notes if plans[0].notes else "План пустой"
 
     return {
         "date": selected_month or "-",
@@ -77,10 +77,10 @@ async def get_report_card(dialog_manager: DialogManager, **kwargs):
         "parent_username": parent_username,
         "trainer_username": trainer_username,
         "count_rows": len(reports),
-
+        "level": child.level.name,
         "months": months_btn,
 
-        "month_plan": month_plan
+        # "month_plan": month_plan
     }
 
 

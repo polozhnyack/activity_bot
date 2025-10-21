@@ -95,9 +95,14 @@ class ChildService:
         result = await self.session.execute(select(Child))
         return result.scalars().all()
 
-    async def get_by_code(self, code: str) -> Optional["Child"]:
-        result = await self.session.execute(select(Child).where(Child.code == code))
+    async def get_by_code(self, code: str) -> Child:
+        result = await self.session.execute(
+            select(Child)
+            .options(selectinload(Child.level))
+            .where(Child.code == code)
+        )
         return result.scalars().first()
+    
     
     async def create(self, **kwargs) -> "Child":
         for _ in range(10):
@@ -473,8 +478,8 @@ class ReportService:
     async def get_child_reports_json(self, child_id: str) -> dict:
         result = await self.session.execute(
             select(Report)
-            # .where(Report.child_id == child_id, Report.status == ReportStatus.approved)
-            .where(Report.child_id == child_id, Report.status == ReportStatus.in_review)
+            .where(Report.child_id == child_id, Report.status == ReportStatus.approved)
+            # .where(Report.child_id == child_id, Report.status == ReportStatus.in_review)
             .options(
                 selectinload(Report.photos).selectinload(Photo.exercise),
                 selectinload(Report.comments)
@@ -531,10 +536,40 @@ class ReportService:
         return True, trainer_id
 
 
+    async def approve_reports_by_child_and_month(
+        self,
+        child_code: str,
+        selected_month: str
+    ):
+        """Меняет статус всех отчетов ребёнка за указанный месяц с in_review на approved."""
+        await self.session.execute(
+            update(Report)
+            .where(
+                Report.child_id == child_code,
+                Report.month == selected_month,
+                Report.status == ReportStatus.in_review
+            )
+            .values(status=ReportStatus.approved)
+        )
+        await self.session.commit()
 
 @dataclass
 class ExerciseService:
     session: AsyncSession
+
+    async def get_all_for_select(self) -> list[tuple[str, int]]:
+        result = await self.session.execute(select(Level.id, Level.name))
+        levels = result.all()
+        return [(name, level_id) for level_id, name in levels]
+    
+    
+    async def get_by_level(self, level_id: int) -> list[Exercise]:
+        result = await self.session.execute(
+            select(Exercise).where(Exercise.level_id == level_id)
+        )
+        return result.scalars().all()
+    
+
 
     async def get_all(self) -> list["Exercise"]:
         result = await self.session.execute(select(Exercise))

@@ -76,30 +76,40 @@ async def get_child_data(dialog_manager: DialogManager, **kwargs):
     )
     child: Child = await child_servise.get_by_code(child_code)
 
-    plans: MonthlyPlan = await child_servise.get_monthly_plan(
-        child_id=child_code,
-        month=month_str
-    )
+    # plans: MonthlyPlan = await child_servise.get_monthly_plan(
+    #     child_id=child_code,
+    #     month=month_str
+    # )
 
-    if not plans:
-        month_plan = "Планов на этот месяц не найдено"
-    else:
-        month_plan = plans[0].notes if plans[0].notes else "План пустой"
+    # if not plans:
+    #     month_plan = "Планов на этот месяц не найдено"
+    # else:
+    #     month_plan = plans[0].notes if plans[0].notes else "План пустой"
 
     return {
         "reports_count": len(reports_info["reports"]),
         "last_report_date": reports_info["last_report_date"],
         "full_name": child.full_name,
+        "level": child.level.name,
         "birth_date": child.birth_date.strftime("%d.%m.%Y") if child.birth_date else "не указано",
         "code": child.code,
-        "month_plan": month_plan
+        # "month_plan": month_plan
     }
 
 
 async def get_exercise_btn(dialog_manager: DialogManager, **kwargs):
     service: ExerciseService = dialog_manager.middleware_data["ExerciseService"]
 
-    exercises = await service.get_all()
+    child_code = dialog_manager.dialog_data["child_code"]
+
+    child_service: ChildService = dialog_manager.middleware_data["ChildService"]
+
+    child: Child = await child_service.get_by_code(child_code)
+
+    if not child.level_id:
+        return {"exercises": []} 
+
+    exercises = await service.get_by_level(child.level_id)
 
     return {
         "exercises": [

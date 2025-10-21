@@ -55,7 +55,16 @@ async def get_child_info(dialog_manager: DialogManager, **kwargs):
 async def get_exercise_btn(dialog_manager: DialogManager, **kwargs):
     service: ExerciseService = dialog_manager.middleware_data["ExerciseService"]
 
-    exercises = await service.get_all()
+    child_code = dialog_manager.dialog_data["child_code"]
+
+    child_service: ChildService = dialog_manager.middleware_data["ChildService"]
+
+    child: Child = await child_service.get_by_code(child_code)
+
+    if not child.level_id:
+        return {"exercises": []} 
+
+    exercises = await service.get_by_level(child.level_id)
 
     return {
         "exercises": [

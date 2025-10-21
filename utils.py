@@ -82,11 +82,11 @@ async def resolve_file_paths_aiogram(bot: Bot, child_service, reports_data: dict
     new_data = {}
 
     for month, exercises in reports_data.items():
-        plans = await child_service.get_monthly_plan(child_id=child_code, month=month)
-        if not plans:
-            month_plan = "Планов на этот месяц не найдено"
-        else:
-            month_plan = plans[0].notes if plans[0].notes else "План пустой"
+        # plans = await child_service.get_monthly_plan(child_id=child_code, month=month)
+        # if not plans:
+        #     month_plan = "Планов на этот месяц не найдено"
+        # else:
+        #     month_plan = plans[0].notes if plans[0].notes else "План пустой"
 
         new_data[month] = {}
 
@@ -108,7 +108,7 @@ async def resolve_file_paths_aiogram(bot: Bot, child_service, reports_data: dict
                     "comments": photo["comments"]
                 })
 
-        new_data[month]["Plan"] = month_plan
+        # new_data[month]["Plan"] = month_plan
 
     return new_data
 
