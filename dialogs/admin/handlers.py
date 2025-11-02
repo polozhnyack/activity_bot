@@ -59,8 +59,6 @@ async def child_handler(
             birth_date=birth_date
         )
 
-        # child = await child_service.create(full_name=full_name, birth_date=birth_date)
-        # await message.answer(f"✅ Ребёнок создан: {child.full_name} ({child.code})")
 
         await dialog_manager.switch_to(AdminState.select_child_level)
 

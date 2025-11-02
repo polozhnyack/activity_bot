@@ -111,7 +111,7 @@ director_dialog = Dialog(
             "🏆 <b>Уровень:</b> {level}\n\n"
             "🏋️ <b>Тренер:</b> {trainer_username}\n"
             "👨‍👩‍👧 <b>Родитель:</b> {parent_username}\n\n"
-            "📅 <b>План на месяц</b> \n\n{month_plan}"
+            "📅 <b>ОФП</b> \n\n{month_plan}"
         ),
         months_select,
         Button(

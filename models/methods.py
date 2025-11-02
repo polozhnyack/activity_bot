@@ -196,7 +196,7 @@ class ReportService:
         trainer_id: int | None = None,
         exercise_id: int | None = None,
         month: int | None = None,
-        comment_text: str | None = None  # новый параметр для комментария
+        comment_text: str | None = None 
     ):
         year = datetime.now().year
         month_str = f"{year}-{month:02d}" if month else datetime.now().strftime("%Y-%m")

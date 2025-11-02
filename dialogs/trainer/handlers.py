@@ -204,6 +204,9 @@ async def on_exercise_selected(
     year = datetime.now().year
     month_str = f"{year}-{selected_month:02d}" 
 
+    logger.debug(f"выбор упражнения тренером: {child_code}")
+    logger.debug(f"выбор упражнения тренером (месяц): {month_str}")
+
     if widget.widget_id == "exercise_select":
         report_service: ReportService = dialog_manager.middleware_data["ReportService"]
 

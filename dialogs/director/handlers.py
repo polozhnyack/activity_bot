@@ -92,15 +92,15 @@ async def on_exercise_selected(
             status=ReportStatus.in_review
         )
 
-        # plans: MonthlyPlan = await child_service.get_monthly_plan(
-        #     child_id=child_code,
-        #     month=month_str
-        # )
+        plans: MonthlyPlan = await child_service.get_monthly_plan(
+            child_id=child_code,
+            month=month_str
+        )
 
-        # if not plans:
-        #     month_plan = "Планов на этот месяц не найдено"
-        # else:
-        #     month_plan = plans[0].notes if plans[0].notes else "План пустой"
+        if not plans:
+            month_plan = "-"
+        else:
+            month_plan = plans[0].notes if plans[0].notes else "-"
 
 
         reports.sort(key=lambda r: r.created_at)
@@ -112,7 +112,7 @@ async def on_exercise_selected(
                 history_items.append({
                     "photo_file_id": photo.file_id,
                     "text": report,
-                    # "month_plan": month_plan
+                    "month_plan": month_plan
                 })
 
         logger.debug(history_items)
@@ -194,16 +194,19 @@ async def approve_report(callback: CallbackQuery, button, dialog_manager: Dialog
     pdf_path = render_html_to_pdf(full_html, f"{child_name_clean}.pdf")
 
     try:
-        try:
-            await callback.bot.send_document(
-                chat_id=child.parent_id,
-                document=FSInputFile(path=pdf_path),
-                caption=f"<b>📄 Отчёт по ученику:</b> {child.full_name}",
-                parse_mode="HTML"
-            )
-            parent_status = "✅ Отчет родителю успешно отправлен."
-        except Exception as e:
-            parent_status = f"⚠️ Не удалось отправить отчет родителю: {e}"
+        if child.parent_id:
+            try:
+                await callback.bot.send_document(
+                    chat_id=child.parent_id,
+                    document=FSInputFile(path=pdf_path),
+                    caption=f"<b>📄 Отчёт по ученику:</b> {child.full_name}",
+                    parse_mode="HTML"
+                )
+                parent_status = "✅ Отчет родителю успешно отправлен."
+            except Exception as e:
+                parent_status = f"⚠️ Не удалось отправить отчет родителю: {e}"
+        else:
+            parent_status = "⚠️ Отчет родителю не отправлен: ребенок не привязан к родителю."
 
         await callback.bot.send_document(
             chat_id=callback.from_user.id,
@@ -217,6 +220,7 @@ async def approve_report(callback: CallbackQuery, button, dialog_manager: Dialog
 
     except Exception as e:
         await callback.message.answer(f"❌ Ошибка при отправке отчёта.\n{e}")
+
 
     try:
         remove_files(report_data)

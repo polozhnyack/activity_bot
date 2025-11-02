@@ -82,11 +82,11 @@ async def resolve_file_paths_aiogram(bot: Bot, child_service, reports_data: dict
     new_data = {}
 
     for month, exercises in reports_data.items():
-        # plans = await child_service.get_monthly_plan(child_id=child_code, month=month)
-        # if not plans:
-        #     month_plan = "Планов на этот месяц не найдено"
-        # else:
-        #     month_plan = plans[0].notes if plans[0].notes else "План пустой"
+        plans = await child_service.get_monthly_plan(child_id=child_code, month=month)
+        if not plans:
+            month_plan = "-"
+        else:
+            month_plan = plans[0].notes if plans[0].notes else "-"
 
         new_data[month] = {}
 
@@ -108,7 +108,7 @@ async def resolve_file_paths_aiogram(bot: Bot, child_service, reports_data: dict
                     "comments": photo["comments"]
                 })
 
-        # new_data[month]["Plan"] = month_plan
+        new_data[month]["Plan"] = month_plan
 
     return new_data
 
@@ -310,7 +310,7 @@ def generate_progress_html_vertical(data: dict, child_name: str = "ФИ ребё
 
         html_parts.append('</tr>')
 
-    html_parts.append('<tr><td class="exercise-name"><div class="exercise-name-inner">План</div></td>')
+    html_parts.append('<tr><td class="exercise-name"><div class="exercise-name-inner">ОФП</div></td>')
     for i in range(1, 13):
         month_str = f"{i:02d}"
         matching_key = next((k for k in data.keys() if k.endswith(f"-{month_str}")), None)
