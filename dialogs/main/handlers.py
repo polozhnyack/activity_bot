@@ -15,10 +15,15 @@ from models.methods import UserService, ChildService, ReportService
 from models.models import *
 from config import load_config
 from logger import logger
+from blockmanager import BlockManager
 
 
 router = Router()
 config = load_config()
+block_manager = BlockManager()
+
+MAX_ATTEMPTS = 3
+BLOCK_HOURS = 24
 
 @router.message(CommandStart())
 async def command_start_process(
@@ -31,6 +36,16 @@ async def command_start_process(
     await dialog_manager.reset_stack()
 
     user = await UserService.get_by_id(message.from_user.id)
+
+    if block_manager.is_blocked(message.from_user.id):
+        blocked_until = block_manager.get_block_time(message.from_user.id)
+        blocked_str = blocked_until.strftime("%d.%m.%Y %H:%M")
+        await message.answer(
+            f"⏳ Вы превысили количество попыток. Повторная попытка возможна после {blocked_str}"
+        )
+        return
+    
+    logger.debug("Пользователь не заблокирован!")
 
     if not user:
         user = await UserService.create_user(
@@ -83,6 +98,22 @@ async def child_code_handler(
         manager: DialogManager,
         **kwargs
 ):
+    
+    logger.debug("Запуск child_code_handler")
+    
+    now = datetime.now()
+    user_id = message.from_user.id
+
+    if block_manager.is_blocked(user_id):
+        blocked_until = block_manager.get_block_time(user_id)
+        blocked_str = blocked_until.strftime("%d.%m.%Y %H:%M")
+        await message.answer(
+            f"⏳ Вы превысили количество попыток. Повторная попытка возможна после {blocked_str}"
+        )
+        return
+    
+    logger.debug("Пользователь не заблокирован в child_code_handler!")
+    
     child_service: ChildService = manager.middleware_data["ChildService"]
     user_service: UserService = manager.middleware_data["UserService"]
 
@@ -95,6 +126,13 @@ async def child_code_handler(
         )
 
         if result == "attached":
+
+            block_manager.reset_attempts(user_id)
+            if user_id in block_manager.blocks:
+                del block_manager.blocks[user_id]
+
+
+            
             manager.dialog_data.update({
                 "parent_id": message.from_user.id,
                 "child_code": child.code,
@@ -111,16 +149,19 @@ async def child_code_handler(
             await message.answer("⚠️ Этот ребёнок уже прикреплён к другому родителю.")
             await manager.switch_to(ParentRegistration.input_code)
 
-        else:
-            await message.answer("❌ Неверный код, попробуйте снова.")
-            await manager.switch_to(ParentRegistration.input_code)
-
     else:
-        await message.answer("❌ Неверный код, попробуйте снова.")
+
+        attempts = block_manager.increment_attempts(user_id)
+        
+        if attempts >= MAX_ATTEMPTS:
+            block_manager.block_user(user_id, BLOCK_HOURS)
+            await message.answer(
+                "❌ Превышено количество попыток. Ввод кода заблокирован на 24 часа."
+            )
+            await manager.done()
+        else:
+            await message.answer(f"❌ Неверный код, попробуйте снова. Осталось попыток: {MAX_ATTEMPTS - attempts}")
         await manager.switch_to(ParentRegistration.input_code)
-
-
-
 
 
 async def month_selected(
