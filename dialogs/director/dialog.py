@@ -175,7 +175,7 @@ director_dialog = Dialog(
         Button(
             text=Const("✏️ Добавить комментарий"),
             id="add_comment",
-            on_click=lambda c, b, m: m.switch_to(state=TrainerStates.add_comment),
+            on_click=lambda c, b, m: m.switch_to(state=DirectorState.edit_comment_in_review),
             when=lambda data, widget, manager: data.get("text") != "Нет данных" and not data.get("has_comment")
         ),
         Button(
