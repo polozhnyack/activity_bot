@@ -69,6 +69,15 @@ async def get_report_card(dialog_manager: DialogManager, **kwargs):
     else:
         month_plan = plans[0].notes if plans[0].notes else "План пустой"
 
+    months_with_markers = []
+    for m in months_btn:
+        if m == selected_month:
+            months_with_markers.append(f"● {m} ●")
+        else:
+            months_with_markers.append(m)
+
+
+
     return {
         "date": selected_month or "-",
         "full_name": child.full_name or "-",
@@ -78,7 +87,7 @@ async def get_report_card(dialog_manager: DialogManager, **kwargs):
         "trainer_username": trainer_username,
         "count_rows": len(reports),
         "level": child.level.name,
-        "months": months_btn,
+        "months": months_with_markers,
 
         "month_plan": month_plan
     }

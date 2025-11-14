@@ -14,7 +14,7 @@ from models.models import *
 from config import load_config
 from logger import logger
 from dialogs.trainer.getter import get_childs_btn
-from utils import resolve_file_paths_aiogram, generate_progress_html_vertical, render_html_to_pdf, html_code_creator, remove_files
+from utils import resolve_file_paths_aiogram, generate_progress_html_vertical, render_html_to_pdf, html_code_creator, remove_files, delete_file
 
 import json
 
@@ -153,22 +153,25 @@ async def approve_report(callback: CallbackQuery, button, dialog_manager: Dialog
     child_code = dialog_manager.dialog_data.get("child_code")
     selected_month = dialog_manager.dialog_data.get("selected_month")
 
-    logger.debug(f"Подтверждение отчетов для ребенка {child_code} за месяц {selected_month}")
-
     try:
+        logger.info(f"Подтверждение отчетов для ребенка {child_code} за месяц {selected_month}")
         await report_service.approve_reports_by_child_and_month(
             child_code=child_code,
             selected_month=selected_month
         )
+        logger.debug("approve_reports_by_child_and_month выполнено успешно")
     except Exception as e:
-        logger.warning(f"Ошибка при утверждении отчетов для child_code={child_code}, month={selected_month}")
+        logger.critical(f"Ошибка при утверждении отчетов для child_code={child_code}, month={selected_month}")
 
     grouped = await report_service.get_child_reports_json(child_code)
+    logger.debug(f"grouped reports: {json.dumps(grouped, indent=4, ensure_ascii=False)}")
 
     child: Child = await child_service.get_by_code(child_code)
+    logger.debug(f"Child загружен: {child}")
 
     logger.debug(json.dumps(grouped, indent=4, ensure_ascii=False))
     if selected_month not in grouped:
+        logger.warning(f"Нет отчетов за месяц={selected_month}, child_code={child_code}")
         await dialog_manager.event.answer("Нет данных для утверждения.", show_alert=True)
         return
     
@@ -179,19 +182,18 @@ async def approve_report(callback: CallbackQuery, button, dialog_manager: Dialog
         reports_data=grouped,
         download_dir="temp"
     )
+    logger.debug(f"report_data подготовлены: {report_data}")
 
     logger.debug(json.dumps(report_data, indent=4, ensure_ascii=False))
     html_table = generate_progress_html_vertical(report_data, child.full_name)
 
     full_html = html_code_creator(html_table)
 
-    with open("progress_journal.html", "w", encoding="utf-8") as f:
-        f.write(full_html)
-
     clean_name = lambda name: name.replace(" ", "_").lower()
     child_name_clean = clean_name(child.full_name)
 
     pdf_path = render_html_to_pdf(full_html, f"{child_name_clean}.pdf")
+    logger.debug(f"PDF сгенерирован: {pdf_path}")
 
     try:
         if child.parent_id:
@@ -203,6 +205,7 @@ async def approve_report(callback: CallbackQuery, button, dialog_manager: Dialog
                     parse_mode="HTML"
                 )
                 parent_status = "✅ Отчет родителю успешно отправлен."
+                logger.debug("Отчет отправлен родителю")
             except Exception as e:
                 parent_status = f"⚠️ Не удалось отправить отчет родителю: {e}"
         else:
@@ -215,15 +218,15 @@ async def approve_report(callback: CallbackQuery, button, dialog_manager: Dialog
                     f"(Копия для вас)",
             parse_mode="HTML"
         )
-
+        logger.debug("Копия отчета отправлена пользователю")
         await callback.message.answer(f"{parent_status}\n📨 Копия отчёта отправлена вам.")
 
     except Exception as e:
         await callback.message.answer(f"❌ Ошибка при отправке отчёта.\n{e}")
 
-
     try:
         remove_files(report_data)
+        delete_file(pdf_path)
     except Exception as e:
         logger.error(f"Ошибка удаления файлов: {e}")
     

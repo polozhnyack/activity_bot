@@ -20,14 +20,17 @@ def generate_child_code(length: int = 6) -> str:
 def remove_files(data_dict):
     for month, exercises in data_dict.items():
         for exercise_name, items in exercises.items():
-            for item in items:
-                file_path = item.get("file_path")
-                if file_path and os.path.exists(file_path):
-                    try:
-                        os.remove(file_path)
-                        logger.info(f"Удалён файл: {file_path}")
-                    except Exception as e:
-                        logger.error(f"Не удалось удалить {file_path}: {e}")
+            if isinstance(items, list):  # только если это список
+                for item in items:
+                    if isinstance(item, dict):  # и внутри должны быть словари
+                        file_path = item.get("file_path")
+                        if file_path and os.path.exists(file_path):
+                            try:
+                                os.remove(file_path)
+                                logger.info(f"Удалён файл: {file_path}")
+                            except Exception as e:
+                                logger.error(f"Не удалось удалить {file_path}: {e}")
+
 
 
 def delete_file(file_path: str) -> bool:

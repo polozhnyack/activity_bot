@@ -34,7 +34,7 @@ months_select = Group(
     Select(
         Format("{item}"),
         id="s_months",
-        item_id_getter=lambda x: x,
+        item_id_getter=lambda x: x.replace("● ", "").replace(" ●", ""),
         items="months",
         on_click=on_month_selected
     ),
