@@ -266,3 +266,52 @@ async def reject_report(callback: CallbackQuery, button, dialog_manager: DialogM
 
     await callback.message.answer("✅ Отчёт успешно отклонён.")
     await dialog_manager.switch_to(DirectorState.director_menu)
+
+
+async def on_edit_comment(message: Message, _: MessageInput, manager: DialogManager):
+    if not message.text:
+        await message.answer("⚠️ Пожалуйста, отправьте только текст")
+        return
+    
+
+    report_id: Report = manager.dialog_data.get("selected_report")
+    if not report_id:
+        await message.answer("❌ Ошибка: отчет не выбран")
+        return
+    
+
+    report_service: ReportService = manager.middleware_data["ReportService"]
+
+    await report_service.add_comment(
+        report_id=report_id,
+        author_id=message.from_user.id,
+        text=message.text.strip(),
+    )
+
+    await message.answer("✅ Комментарий добавлен")
+    await manager.switch_to(state=DirectorState.select_elements_in_review)
+
+
+
+async def on_edit_photo(message: Message, _: MessageInput, manager: DialogManager):
+    if not message.photo:
+        await message.answer("⚠️ Пожалуйста, отправьте фотографию")
+        return
+    
+    report_id: Report = manager.dialog_data.get("selected_report")
+    if not report_id:
+        await message.answer("❌ Ошибка: отчет не выбран")
+        return
+
+    report_service: ReportService = manager.middleware_data["ReportService"]
+
+    photo_size = message.photo[-1]
+    file_id = photo_size.file_id
+
+    await report_service.update_photo_by_report_id(
+        report_id=int(report_id),
+        new_file_id=file_id
+    )
+
+    await message.answer("✅ Фото успешно обновлено")
+    await manager.switch_to(state=DirectorState.select_elements_in_review)

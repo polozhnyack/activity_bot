@@ -37,6 +37,9 @@ class DirectorState(StatesGroup):
     report = State()
     report_list = State()
 
+    edit_photo_in_review = State()
+    edit_comment_in_review = State()
+
     select_elements_in_review = State()
     report_review = State()
     history_progress = State()

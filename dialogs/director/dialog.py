@@ -163,9 +163,20 @@ director_dialog = Dialog(
     Window(
         Format("{text}"),
         DynamicMedia("photo"),
-        Row(
-            Button(text=Const("◀️"), id="prev", on_click=prev_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
-            Button(text=Const("▶️"), id="next", on_click=next_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
+        # Row(
+        #     Button(text=Const("◀️"), id="prev", on_click=prev_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
+        #     Button(text=Const("▶️"), id="next", on_click=next_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
+        # ),
+        Button(
+            text=Const("📸 Изменить фото"),
+            id="edit_photo",
+            on_click=lambda c, b, m: m.switch_to(state=DirectorState.edit_photo_in_review),
+        ),
+        Button(
+            text=Const("📝 Изменить комментарий"),
+            id="edit_comment",
+            on_click=lambda c, b, m: m.switch_to(state=DirectorState.edit_comment_in_review),
+            when=lambda data, widget, manager: data.get("text") != "Нет данных" and data.get("has_comment"),
         ),
         Button(
             text=Const("⬅️ Назад"),
@@ -174,6 +185,38 @@ director_dialog = Dialog(
         ),
         state=DirectorState.history_progress,
         getter=get_current_history_item
+    ),
+    Window( # Изменение комментария отчета в статусе "На проверке"
+        Const(
+            "✍️ Отправьте текст комментария.\n\n"
+            "➡️ Просто напишите сообщение ниже, и оно сохранится к отчёту."
+          ),
+        MessageInput(
+            on_edit_comment,
+            content_types=ContentType.TEXT
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back_menu",
+            on_click=lambda c, b, m: m.switch_to(DirectorState.history_progress)
+        ),
+        state=DirectorState.edit_comment_in_review
+    ),
+    Window( # Изменение фото отчета в статусе "На проверке"
+        Const(
+            "✍️ Отправьте новое фото.\n\n"
+            "➡️ Оно автоматически изменится в отчёте."
+          ),
+        MessageInput(
+            on_edit_photo,
+            content_types=ContentType.PHOTO
+        ),
+        Button(
+            text=Const("⬅️ Назад"),
+            id="back_menu",
+            on_click=lambda c, b, m: m.switch_to(DirectorState.history_progress)
+        ),
+        state=DirectorState.edit_photo_in_review
     ),
     Window(
         Const(

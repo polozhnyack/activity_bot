@@ -553,6 +553,21 @@ class ReportService:
         )
         await self.session.commit()
 
+
+    async def update_photo_by_report_id(self, report_id: int, new_file_id: str):
+        photo = await self.session.scalar(
+            select(Photo).where(Photo.report_id == report_id)
+        )
+
+        if not photo:
+            raise ValueError(f"У отчёта {report_id} нет фото")
+
+        photo.file_id = new_file_id
+        await self.session.commit()
+        await self.session.refresh(photo)
+
+        return photo
+
 @dataclass
 class ExerciseService:
     session: AsyncSession
