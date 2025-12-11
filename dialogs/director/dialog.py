@@ -162,15 +162,33 @@ director_dialog = Dialog(
     ),
     Window(
         Format("{text}"),
-        DynamicMedia("photo"),
+        DynamicMedia(
+            "photo",
+            when=lambda data, widget, manager: bool(data.get("photo"))
+        ),
         # Row(
         #     Button(text=Const("◀️"), id="prev", on_click=prev_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
         #     Button(text=Const("▶️"), id="next", on_click=next_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
         # ),
-        Button(
-            text=Const("📸 Изменить фото"),
-            id="edit_photo",
-            on_click=lambda c, b, m: m.switch_to(state=DirectorState.edit_photo_in_review),
+        Row(
+            Button(
+                text=Const("📸 Изменить фото"),
+                id="edit_photo",
+                on_click=lambda c, b, m: m.switch_to(state=DirectorState.edit_photo_in_review),
+                when=lambda data, widget, manager: bool(data.get("photo"))
+            ),
+            Button(
+                text=Const("➕ Добавить фото"),
+                id="add_photo",
+                on_click=lambda c, b, m: m.switch_to(state=DirectorState.edit_photo_in_review),
+                when=lambda data, widget, manager: not bool(data.get("photo"))
+            ),
+            Button(
+                text=Const("🗑️ Удалить фото"),
+                id="delete_photo",
+                on_click=delete_photo_from_item,
+                when=lambda data, widget, manager: bool(data.get("photo"))
+            )
         ),
         Button(
             text=Const("✏️ Добавить комментарий"),

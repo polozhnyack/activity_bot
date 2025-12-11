@@ -196,7 +196,8 @@ class ReportService:
         trainer_id: int | None = None,
         exercise_id: int | None = None,
         month: int | None = None,
-        comment_text: str | None = None 
+        comment_text: str | None = None,
+        status: ReportStatus = ReportStatus.draft
     ):
         year = datetime.now().year
         month_str = f"{year}-{month:02d}" if month else datetime.now().strftime("%Y-%m")
@@ -204,7 +205,7 @@ class ReportService:
         report = Report(
             child_id=child_code,
             month=month_str,
-            status=ReportStatus.draft,
+            status=status,
             trainer_id=trainer_id
         )
         self.session.add(report)
@@ -567,6 +568,16 @@ class ReportService:
         await self.session.refresh(photo)
 
         return photo
+    
+    async def delete_photo_from_report(self, report_id: int):
+        stmt = (
+            update(Photo)
+            .where(Photo.report_id == report_id)
+            .values(file_id=None)
+        )
+        result = await self.session.execute(stmt)
+        await self.session.commit()
+        return result.rowcount
 
 @dataclass
 class ExerciseService:

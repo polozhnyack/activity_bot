@@ -119,27 +119,95 @@ async def get_child_data(dialog_manager: DialogManager, **kwargs):
     }
 
 
+# async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
+#     items = dialog_manager.dialog_data.get("history_items", [])
+#     index = dialog_manager.dialog_data.get("history_index", 0)
+
+#     ex_service: ExerciseService = dialog_manager.middleware_data["ExerciseService"]
+
+#     if not items:
+#         return {"text": "Нет данных", "photo": None}
+
+#     item = items[index]
+
+
+#     photo_file_id = item.get("photo_file_id")
+#     if photo_file_id:
+#         media = MediaAttachment(
+#             type=ContentType.PHOTO,
+#             file_id=MediaId(photo_file_id)
+#         )
+#     else:
+#         media = None  # нет фото
+
+#     report: Report = item["text"]
+
+#     month_plan: str = item.get("month_plan", "План не найден")
+
+#     dialog_manager.dialog_data["selected_report"] = int(report.id)
+
+#     exercise_name = "-"
+#     if report.photos and report.photos[0].exercise_id:
+#         exercise_name = await ex_service.get_exercise_name_by_id(report.photos[0].exercise_id)
+
+#     text = (
+#         f"📅 <b>Отчёт за:</b> {report.month}\n"
+#         f"🏋️‍♂️ <b>Упражнение:</b> {exercise_name or 'Не указано'}\n\n"
+#         f"💬 <b>Комментарий тренера:</b>\n"
+#         f"{report.comments[-1].text if report.comments else 'Нет комментариев'}"
+#     )
+
+#     logger.debug(text)
+
+#     return {
+#         "has_comment": bool(report.comments),
+#         "text": text, 
+#         "photo": media,
+#         }
+
+
 async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
-    items = dialog_manager.dialog_data.get("history_items", [])
-    index = dialog_manager.dialog_data.get("history_index", 0)
-
     ex_service: ExerciseService = dialog_manager.middleware_data["ExerciseService"]
+    report_service: ReportService = dialog_manager.middleware_data["ReportService"]
+    child_service: ChildService = dialog_manager.middleware_data["ChildService"]
 
-    if not items:
+    child_code = dialog_manager.dialog_data.get("child_code")
+    selected_month = dialog_manager.dialog_data.get("selected_month")
+    exercise_id = dialog_manager.dialog_data.get("selected_exercise")
+
+    if not (child_code and selected_month and exercise_id):
         return {"text": "Нет данных", "photo": None}
 
-    item = items[index]
-
-    media = MediaAttachment(
-        type=ContentType.PHOTO,
-        file_id=MediaId(item["photo_file_id"])
+    reports: list[Report] = await report_service.get_reports_by_child_and_month(
+        child_id=child_code,
+        month=selected_month,
+        exercise_id=exercise_id,
+        status=ReportStatus.in_review
     )
 
-    report: Report = item["text"]
+    if not reports:
+        return {"text": "Нет отчётов", "photo": None}
 
-    month_plan: str = item.get("month_plan", "План не найден")
+    report = sorted(reports, key=lambda r: r.created_at)[-1]
 
-    dialog_manager.dialog_data["selected_report"] = int(report.id)
+    plans: MonthlyPlan = await child_service.get_monthly_plan(
+        child_id=child_code,
+        month=selected_month
+    )
+
+    month_plan = "-"
+    if plans and plans[0].notes:
+        month_plan = plans[0].notes
+
+    photo_file_id = report.photos[0].file_id if report.photos else None
+
+    if photo_file_id:
+        media = MediaAttachment(
+            type=ContentType.PHOTO,
+            file_id=MediaId(photo_file_id)
+        )
+    else:
+        media = None
 
     exercise_name = "-"
     if report.photos and report.photos[0].exercise_id:
@@ -152,10 +220,10 @@ async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
         f"{report.comments[-1].text if report.comments else 'Нет комментариев'}"
     )
 
-    logger.debug(text)
+    dialog_manager.dialog_data["selected_report"] = int(report.id)
 
     return {
         "has_comment": bool(report.comments),
-        "text": text, 
+        "text": text,
         "photo": media,
-        }
+    }

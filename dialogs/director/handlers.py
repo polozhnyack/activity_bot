@@ -67,60 +67,74 @@ async def report_child_selected(
 
 
 
+# async def on_exercise_selected(
+#     callback: CallbackQuery,
+#     widget: Select,
+#     dialog_manager: DialogManager,
+#     item_id: str,  
+# ):
+#     exercise_id = int(item_id)
+#     dialog_manager.dialog_data["selected_exercise"] = exercise_id
+#     child_code = dialog_manager.dialog_data.get("child_code")
+#     selected_month = dialog_manager.dialog_data.get("selected_month")
+
+#     year = datetime.now().year
+#     month_str = selected_month
+
+#     if widget.widget_id == "exercise_select":
+#         report_service: ReportService = dialog_manager.middleware_data["ReportService"]
+#         child_service: ChildService = dialog_manager.middleware_data["ChildService"]
+
+#         reports: list[Report] = await report_service.get_reports_by_child_and_month(
+#             child_id=child_code,
+#             month=month_str,
+#             exercise_id=exercise_id,
+#             status=ReportStatus.in_review
+#         )
+
+#         plans: MonthlyPlan = await child_service.get_monthly_plan(
+#             child_id=child_code,
+#             month=month_str
+#         )
+
+#         if not plans:
+#             month_plan = "-"
+#         else:
+#             month_plan = plans[0].notes if plans[0].notes else "-"
+
+
+#         reports.sort(key=lambda r: r.created_at)
+#         logger.debug(reports)
+
+#         history_items = []
+#         for report in reports:
+#             for photo in report.photos:
+#                 history_items.append({
+#                     "photo_file_id": photo.file_id,
+#                     "text": report,
+#                     "month_plan": month_plan
+#                 })
+
+#         logger.debug(history_items)
+
+#         dialog_manager.dialog_data["history_items"] = history_items
+#         dialog_manager.dialog_data["history_index"] = 0
+
+#         await dialog_manager.switch_to(state=DirectorState.history_progress)
+
+
 async def on_exercise_selected(
     callback: CallbackQuery,
     widget: Select,
     dialog_manager: DialogManager,
-    item_id: str,  
+    item_id: str,
 ):
     exercise_id = int(item_id)
     dialog_manager.dialog_data["selected_exercise"] = exercise_id
-    child_code = dialog_manager.dialog_data.get("child_code")
-    selected_month = dialog_manager.dialog_data.get("selected_month")
-
-    year = datetime.now().year
-    month_str = selected_month
 
     if widget.widget_id == "exercise_select":
-        report_service: ReportService = dialog_manager.middleware_data["ReportService"]
-        child_service: ChildService = dialog_manager.middleware_data["ChildService"]
-
-        reports: list[Report] = await report_service.get_reports_by_child_and_month(
-            child_id=child_code,
-            month=month_str,
-            exercise_id=exercise_id,
-            status=ReportStatus.in_review
-        )
-
-        plans: MonthlyPlan = await child_service.get_monthly_plan(
-            child_id=child_code,
-            month=month_str
-        )
-
-        if not plans:
-            month_plan = "-"
-        else:
-            month_plan = plans[0].notes if plans[0].notes else "-"
-
-
-        reports.sort(key=lambda r: r.created_at)
-        logger.debug(reports)
-
-        history_items = []
-        for report in reports:
-            for photo in report.photos:
-                history_items.append({
-                    "photo_file_id": photo.file_id,
-                    "text": report,
-                    "month_plan": month_plan
-                })
-
-        logger.debug(history_items)
-
-        dialog_manager.dialog_data["history_items"] = history_items
-        dialog_manager.dialog_data["history_index"] = 0
-
         await dialog_manager.switch_to(state=DirectorState.history_progress)
+
 
 
 
@@ -302,9 +316,37 @@ async def on_edit_photo(message: Message, _: MessageInput, manager: DialogManage
         return
     
     report_id: Report = manager.dialog_data.get("selected_report")
+    
     if not report_id:
-        await message.answer("❌ Ошибка: отчет не выбран")
-        return
+        if message.media_group_id:
+            await message.answer("⚠️ Пожалуйста, отправьте только одно фото.")
+            return
+        
+        photo = message.photo[-1]
+
+        service: ReportService = manager.middleware_data["ReportService"]
+
+        file_id = photo.file_id
+        exercise = manager.dialog_data["selected_exercise"]
+        month: str = manager.dialog_data["selected_month"]
+        month = int(month.split("-")[1])
+        child_code = manager.dialog_data["child_code"]
+
+        logger.debug(f"{exercise} - {month} - {child_code}")
+
+        if exercise and month and child_code and file_id:
+            await service.create_report_photo(
+                user_id=message.from_user.id,
+                child_code=child_code,
+                photo_file_id=file_id,
+                exercise_id=exercise,
+                month=month,
+                status=ReportStatus.in_review
+            )
+
+            await message.answer(f"✅ Фото сохранено!")
+            await manager.switch_to(DirectorState.history_progress)
+            return
 
     report_service: ReportService = manager.middleware_data["ReportService"]
 
@@ -317,4 +359,25 @@ async def on_edit_photo(message: Message, _: MessageInput, manager: DialogManage
     )
 
     await message.answer("✅ Фото успешно обновлено")
-    await manager.switch_to(state=DirectorState.select_elements_in_review)
+    await manager.switch_to(state=DirectorState.history_progress)
+
+
+async def delete_photo_from_item(callback: CallbackQuery, button, dialog_manager: DialogManager):
+
+    report_id: Report = dialog_manager.dialog_data.get("selected_report")
+    if not report_id:
+        await callback.message.answer("❌ Ошибка: отчет не выбран")
+        return
+    
+    report_service: ReportService = dialog_manager.middleware_data["ReportService"]
+
+    try:
+        await report_service.delete_photo_from_report(
+            int(report_id)
+        )
+    except Exception as e:
+        logger.error(f"Не удалось удалить фото из отчета {report_id}: {e}")
+        await callback.message.answer(f"Ошибка удаления фото из отчета {report_id}: {e}")
+        return
+    
+    await dialog_manager.switch_to(DirectorState.history_progress)

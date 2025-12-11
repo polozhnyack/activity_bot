@@ -79,7 +79,7 @@ class Photo(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     report_id: Mapped[int] = mapped_column(ForeignKey("reports.id"), nullable=False)
-    file_id: Mapped[str] = mapped_column(String(255), nullable=False)  # Telegram file_id
+    file_id: Mapped[str] = mapped_column(String(255), nullable=True)  # Telegram file_id
     exercise_id: Mapped[int] = mapped_column(ForeignKey("exercises.id"))
     uploaded_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
