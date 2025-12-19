@@ -88,11 +88,26 @@ trainer_dialog = Dialog(
         getter=months_getter
     ),
     Window(
-        Const("👶 Выберите ребёнка:"),
+        Const("👶 Выберите ребёнка:\n"),
+        Const(
+            "📄 На одной странице отображается до 10 детей. Используйте ◀️ ▶️ для навигации",
+            when=lambda data, *args: data.get("show_pager", False)
+        ),
         products_scroller,
         Row(
-            PrevPage(scroll=products_scroller, text=Format("◀️")),
-            NextPage(scroll=products_scroller, text=Format("▶️")),
+            PrevPage(
+                scroll=products_scroller,
+                text=Format("◀️"),
+                # when=lambda data, *args: logger.debug(f"PrevPage when data: {data}") or True
+                when=lambda data, manager, *args: products_scroller.get_page(manager) > 0
+            ),
+            NextPage(
+                scroll=products_scroller,
+                text=Format("▶️"),
+                # when=lambda data, *args: logger.debug(f"NextPage when data: {data}") or True
+                when=lambda data, manager, *args: products_scroller.get_page(manager) < products_scroller.get_page_count(manager) - 1
+            ),
+
             when=lambda data, *args: data.get("show_pager", False)
         ),
         Button(
@@ -236,6 +251,7 @@ trainer_dialog = Dialog(
         getter=get_current_history_item
     ),
     Window(
+        DynamicMedia("photo", when="has_photo"),
         Const(
             "✍️ Отправьте текст комментария.\n\n"
             "➡️ Просто напишите сообщение ниже, и оно сохранится к отчёту."
@@ -249,7 +265,8 @@ trainer_dialog = Dialog(
             id="back_menu",
             on_click=lambda c, b, m: m.switch_to(TrainerStates.history_progress)
         ),
-        state=TrainerStates.add_comment
+        state=TrainerStates.add_comment,
+        getter=get_photo_to_comment
     ),
     Window(
         Const("⚠️ <b>Подтверждение действия</b>\n\n"

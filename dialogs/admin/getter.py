@@ -31,6 +31,7 @@ async def get_roles_data(dialog_manager: DialogManager, **kwargs):
     }
 
 
+
 async def levels_getter(dialog_manager: DialogManager, **kwargs):
     service: ExerciseService = dialog_manager.middleware_data["ExerciseService"]
     levels_list = await service.get_all_for_select()

@@ -92,9 +92,12 @@ class ChildService:
     session: AsyncSession
 
     async def get_all(self) -> list["Child"]:
-        result = await self.session.execute(select(Child))
+        result = await self.session.execute(
+            select(Child).order_by(Child.full_name)
+        )
         return result.scalars().all()
-
+    
+    
     async def get_by_code(self, code: str) -> Child:
         result = await self.session.execute(
             select(Child)
@@ -153,6 +156,24 @@ class ChildService:
         )
         result = await self.session.scalars(stmt)
         return result.all()
+
+    # async def get_children_with_reports_in_review(
+    #     self,
+    #     level_id: int
+    # ) -> list[Child]:
+    #     stmt = (
+    #         select(Child)
+    #         .join(Report, Report.child_id == Child.code)
+    #         .where(
+    #             Report.status == ReportStatus.in_review,
+    #             Child.level_id == level_id
+    #         )
+    #         .distinct()
+    #     )
+
+    #     result = await self.session.scalars(stmt)
+    #     return result.all()
+
 
 
     async def get_monthly_plan(self, child_id: str, month: str | None = None):

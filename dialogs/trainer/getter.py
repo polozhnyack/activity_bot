@@ -35,26 +35,27 @@ async def months_getter(dialog_manager, **kwargs):
 
 async def get_childs_btn(dialog_manager: DialogManager, **kwargs):
     service: ChildService = dialog_manager.middleware_data["ChildService"]
-
     childs: list[Child] = await service.get_all()
     childs = [c for c in childs if c.full_name]
 
-    childs.sort(key=lambda c: c.full_name.lower())
+    page_size = 10
+    total_pages = (len(childs) - 1) // page_size + 1
 
-    show_pager = len(childs) > 10
+    show_pager = total_pages > 1
 
     return {
         "show_pager": show_pager,
-        "childs": childs
+        "childs": childs,
+        "current_page": 0,
+        "total_pages": total_pages
     }
+
 
 async def get_childs_in_review_btn(dialog_manager: DialogManager, **kwargs):
     service: ChildService = dialog_manager.middleware_data["ChildService"]
 
     childs: list[Child] = await service.get_children_with_reports_in_review()
     childs = [c for c in childs if c.full_name]
-
-    childs.sort(key=lambda c: c.full_name.lower())
 
     return {
         "childs": childs

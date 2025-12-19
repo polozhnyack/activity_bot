@@ -157,6 +157,24 @@ async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
         }
 
 
+async def get_photo_to_comment(dialog_manager: DialogManager, **kwargs):
+    items = dialog_manager.dialog_data.get("history_items", [])
+    index = dialog_manager.dialog_data.get("history_index", 0)
+
+    item = items[index]
+
+    media = MediaAttachment(
+        type=ContentType.PHOTO,
+        file_id=MediaId(item["photo_file_id"])
+    )
+
+    return {
+        "has_photo": bool(media),
+        "photo": media
+        }
+
+
+
 async def next_history(callback: CallbackQuery, button, dialog_manager: DialogManager):
     items = dialog_manager.dialog_data.get("history_items", [])
     if not items:

@@ -209,6 +209,9 @@ async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
     else:
         media = None
 
+
+    dialog_manager.dialog_data["current_photo"] = media
+
     exercise_name = "-"
     if report.photos and report.photos[0].exercise_id:
         exercise_name = await ex_service.get_exercise_name_by_id(report.photos[0].exercise_id)
@@ -227,3 +230,14 @@ async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
         "text": text,
         "photo": media,
     }
+
+
+
+async def get_photo_to_comment(dialog_manager: DialogManager, **kwargs):
+
+    media: MediaAttachment = dialog_manager.dialog_data.get("current_photo")
+
+    return {
+        "has_photo": bool(media),
+        "photo": media
+        }

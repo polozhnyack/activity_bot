@@ -211,6 +211,7 @@ director_dialog = Dialog(
         getter=get_current_history_item
     ),
     Window( # Изменение комментария отчета в статусе "На проверке"
+        DynamicMedia("photo", when="has_photo"),
         Const(
             "✍️ Отправьте текст комментария.\n\n"
             "➡️ Просто напишите сообщение ниже, и оно сохранится к отчёту."
@@ -224,7 +225,8 @@ director_dialog = Dialog(
             id="back_menu",
             on_click=lambda c, b, m: m.switch_to(DirectorState.history_progress)
         ),
-        state=DirectorState.edit_comment_in_review
+        state=DirectorState.edit_comment_in_review,
+        getter=get_photo_to_comment
     ),
     Window( # Изменение фото отчета в статусе "На проверке"
         Const(

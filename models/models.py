@@ -15,6 +15,8 @@ class UserRole(enum.Enum):
     parent = "parent"
     trainer = "trainer"
     director = "director"
+    # director_novice = "director_novice"
+    # director_pro = "director_pro"
     admin = "admin"
 
 class ReportStatus(enum.Enum):
@@ -43,11 +45,11 @@ class Child(Base):
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
-    level_id: Mapped[Optional[int]] = mapped_column(ForeignKey("levels.id"), nullable=True)  # ✅ новый FK
+    level_id: Mapped[Optional[int]] = mapped_column(ForeignKey("levels.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
     parent: Mapped["User"] = relationship("User", back_populates="children")
-    level: Mapped[Optional["Level"]] = relationship("Level", back_populates="children")  # ✅ связь
+    level: Mapped[Optional["Level"]] = relationship("Level", back_populates="children")
     reports: Mapped[list["Report"]] = relationship("Report", back_populates="child")
 
     def __init__(self, **kwargs):
