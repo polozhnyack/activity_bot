@@ -99,13 +99,11 @@ trainer_dialog = Dialog(
                 scroll=products_scroller,
                 text=Format("◀️"),
                 # when=lambda data, *args: logger.debug(f"PrevPage when data: {data}") or True
-                when=lambda data, manager, *args: products_scroller.get_page(manager) > 0
             ),
             NextPage(
                 scroll=products_scroller,
                 text=Format("▶️"),
                 # when=lambda data, *args: logger.debug(f"NextPage when data: {data}") or True
-                when=lambda data, manager, *args: products_scroller.get_page(manager) < products_scroller.get_page_count(manager) - 1
             ),
 
             when=lambda data, *args: data.get("show_pager", False)
