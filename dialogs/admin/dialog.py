@@ -5,7 +5,7 @@ from aiogram_dialog.widgets.media import StaticMedia, MediaScroll, DynamicMedia
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram.types import ContentType
 
-from dialogs.states import AdminState
+from dialogs.states import AdminState, TrainerStates
 from .handlers import *
 from .getter import *
 
@@ -27,6 +27,11 @@ admin_window = Dialog(
                 id="delete_child",
                 on_click=creator_child
             ),
+        ),
+        Button(
+            text=Const("🎓 Режим тренера"),
+            id="switch_to_trainer",
+            on_click=lambda c, b, m: m.start(state=TrainerStates.trainer_menu)
         ),
         Row(
             Button(

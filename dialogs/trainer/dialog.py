@@ -55,6 +55,10 @@ trainer_dialog = Dialog(
             "• добавлять комментарии и план;\n"
             "• завершать месяц (отчёт отправляется директору)."
         ),
+        Const(
+            '\nЧто бы вернуться в режим администратора, нажмите /start или кнопку "Назад в админ меню".',
+            when="admin"
+            ),
         Button(
             text=Const("➡️ Начать работу"), 
             id="start", 
@@ -65,7 +69,14 @@ trainer_dialog = Dialog(
             id="history",
             on_click=lambda c, b, m: m.start(state=ProgressHistory.history_menu)
         ),
+        Button(
+            text=Const("⬅️ Назад в админ меню"),
+            id="back_to_admin",
+            on_click=lambda c, b, m: m.start(state=AdminState.admin_menu),
+            when="admin"
+        ),
         state=TrainerStates.trainer_menu,
+        getter=get_trainer_menu_data
     ),
     Window(
         Const("📅 Выберите месяц:"),

@@ -128,3 +128,15 @@ async def get_exercise_text(dialog_manager: DialogManager, **kwargs):
     return {
         "element_name": exercises_name
     }
+
+
+async def get_trainer_menu_data(dialog_manager: DialogManager, **kwargs):
+
+    user_service: UserService = dialog_manager.middleware_data["UserService"]
+    if not user_service:
+        return {"admin": False}
+    user = await user_service.get_by_id(dialog_manager.event.from_user.id)
+
+    is_admin = user and user.role == UserRole.admin
+
+    return {"admin": is_admin}
