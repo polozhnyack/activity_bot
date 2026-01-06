@@ -112,7 +112,7 @@ async def get_exercise_btn(dialog_manager: DialogManager, **kwargs):
 
     # exercises = await service.get_by_level(child.level_id)
 
-    month = dialog_manager.dialog_data["selected_month"]
+    month = str(dialog_manager.dialog_data["selected_month"])
 
     year = datetime.now().year
     month_str = f"{year}-{month:02d}" 
