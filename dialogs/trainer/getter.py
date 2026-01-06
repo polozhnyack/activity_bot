@@ -112,10 +112,17 @@ async def get_exercise_btn(dialog_manager: DialogManager, **kwargs):
 
     # exercises = await service.get_by_level(child.level_id)
 
-    month = int(dialog_manager.dialog_data["selected_month"])
+    raw_month = dialog_manager.dialog_data.get("selected_month")
 
-    year = datetime.now().year
-    month_str = f"{year}-{month:02d}" 
+    if not raw_month:
+        raise ValueError("selected_month is missing")
+
+    if isinstance(raw_month, str) and "-" in raw_month:
+        month_str = raw_month
+    else:
+        month = int(raw_month)
+        year = datetime.now().year
+        month_str = f"{year}-{month:02d}"
 
     logger.debug(f"Getting exercises stats for child {child.code} for month {month_str}")
 
