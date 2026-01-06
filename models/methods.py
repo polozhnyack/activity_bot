@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, date, timedelta, timezone
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload, joinedload
-from sqlalchemy import case, update, delete, select, exists, func
+from sqlalchemy import case, update, delete, select, exists, func, distinct
 from sqlalchemy.exc import IntegrityError
 
 from typing import List, Union, Optional
@@ -616,6 +616,49 @@ class ExerciseService:
         )
         return result.scalars().all()
     
+
+    async def get_exercises_stats_by_child_month(
+        self,
+        child_id: str,
+        month: str,          # "YYYY-MM"
+        level_id: int | None = None,
+    ):
+        stats_subq = (
+            select(
+                Photo.exercise_id.label("exercise_id"),
+                func.count(distinct(Photo.id)).label("photos_count"),
+                func.count(distinct(Comment.id)).label("comments_count")
+            )
+            .join(Report, Report.id == Photo.report_id)
+            .outerjoin(Comment, Comment.report_id == Report.id)
+            .where(
+                Report.child_id == child_id,
+                Report.month == month
+            )
+            .group_by(Photo.exercise_id)
+            .subquery()
+        )
+
+        stmt = select(
+            Exercise,
+            func.coalesce(stats_subq.c.photos_count, 0).label("photos_count"),
+            func.coalesce(stats_subq.c.comments_count, 0).label("comments_count"),
+        ).outerjoin(stats_subq, stats_subq.c.exercise_id == Exercise.id)
+
+        if level_id is not None:
+            stmt = stmt.where(Exercise.level_id == level_id)
+
+        result = await self.session.execute(stmt)
+
+        return [
+            {
+                "exercise": exercise,
+                "photos_count": photos_count,
+                "comments_count": comments_count,
+            }
+            for exercise, photos_count, comments_count in result.all()
+        ]
+
 
 
     async def get_all(self) -> list["Exercise"]:

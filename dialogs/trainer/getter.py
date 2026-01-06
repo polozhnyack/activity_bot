@@ -110,14 +110,42 @@ async def get_exercise_btn(dialog_manager: DialogManager, **kwargs):
     if not child.level_id:
         return {"exercises": []} 
 
-    exercises = await service.get_by_level(child.level_id)
+    # exercises = await service.get_by_level(child.level_id)
+
+    month = dialog_manager.dialog_data["selected_month"]
+
+    year = datetime.now().year
+    month_str = f"{year}-{month:02d}" 
+
+    logger.debug(f"Getting exercises stats for child {child.code} for month {month_str}")
+
+    ex = await service.get_exercises_stats_by_child_month(
+        child_id=child.code,
+        month=month_str,
+        level_id=child.level_id
+    )
+
+    logger.debug(f"Exercises stats: {ex}")
+
+    def format_counter(count: int, emoji: str) -> str:
+        if count <= 0:
+            return ""
+        return f"{emoji} x{count}"
 
     return {
         "exercises": [
-            {"id": ex.id, "name": ex.name}
-            for ex in exercises
+            {
+                "id": item["exercise"].id,
+                "name": (
+                    f"{item['exercise'].name} "
+                    f"{format_counter(item['photos_count'], '📸')} "
+                    f"{format_counter(item['comments_count'], '💬')}"
+                ).strip(),
+            }
+            for item in ex
         ]
     }
+
 
 
 async def get_exercise_text(dialog_manager: DialogManager, **kwargs):
