@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, date, timedelta, timezone
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload, joinedload
-from sqlalchemy import case, update, delete, select, exists, func, distinct
+from sqlalchemy import case, update, delete, select, exists, func, distinct, nullslast
 from sqlalchemy.exc import IntegrityError
 
 from typing import List, Union, Optional
@@ -152,10 +152,12 @@ class ChildService:
             select(Child)
             .join(Report, Report.child_id == Child.code)
             .where(Report.status == ReportStatus.in_review)
+            .order_by(nullslast(Child.full_name.asc()))
             .distinct()
         )
         result = await self.session.scalars(stmt)
         return result.all()
+
 
     # async def get_children_with_reports_in_review(
     #     self,
