@@ -14,15 +14,15 @@ config = load_config()
 
 products_scroller = ScrollingGroup(
     Select(
-        Format("{item.full_name}"),
+        Format("{item[full_name]} · {item[progress]}% {item[progress_emoji]}"),
         id="child",
-        item_id_getter=lambda p: f"code_{p.code}",
+        item_id_getter=lambda p: f"code_{p['code']}",
         items="childs",
         on_click=child_selected
     ),
     id="products_scroller",
-    width=1,
-    height=10,
+    width=2,
+    height=20,
     hide_on_single_page=True,
     hide_pager=True,
 )
@@ -79,7 +79,7 @@ trainer_dialog = Dialog(
         getter=get_trainer_menu_data
     ),
     Window(
-        Const("📅 Выберите месяц:"),
+        Format("📅 <b>Выберите месяц · {year}</b>"),
         Group(
             Select(
                 Format("{item[name]}"),
@@ -99,9 +99,13 @@ trainer_dialog = Dialog(
         getter=months_getter
     ),
     Window(
-        Const("👶 Выберите ребёнка:\n"),
+        Format(
+            "👶 Выберите ребёнка:\n\n"
+            "Прогресс за <b>месяц {month_view}</b>:\n"
+            "⚪️ 0% · 🔴 до 40% · 🟡 40–69% · 🟢 70%+"
+        ),
         Const(
-            "📄 На одной странице отображается до 10 детей. Используйте ◀️ ▶️ для навигации",
+            "\n📄 На одной странице отображается до 20 детей. Используйте ◀️ ▶️ для навигации",
             when=lambda data, *args: data.get("show_pager", False)
         ),
         products_scroller,
@@ -131,16 +135,26 @@ trainer_dialog = Dialog(
         Format(
             "👶 Карточка ребёнка\n\n"
 
+            "📅 Месяц: <b>{month_view}</b>\n"
+            "📊 <b>Заполнено: {month_progress_percent}%</b>\n\n"
+
             "👤 ФИО: {full_name}\n"
             "📅 Дата рождения: {birth_date}\n"
-            "🆔 Код: {code}\n\n"
-
+            "🆔 Код: {code}\n"
             "🏆 <b>Уровень:</b> {level}\n\n"
 
             "📝 Записей за месяц: {reports_count}\n"
             "📌 Последняя запись: {last_report_date}\n\n"
 
-            "📅 ОФП:\n\n{month_plan}"
+            "📅 ОФП:\n{month_plan}"
+        ),
+        Select(
+            text=Format("{item[name]}"),
+            items="child_scroller_items",
+            item_id_getter=lambda x: f"{x['code']}",
+            id="child_scroller",
+            on_click=child_scroll_on_page,
+            when=lambda data, *args: bool(data.get("child_scroller_items"))
         ),
         Button(
             text=Const("➕ Добавить запись"),

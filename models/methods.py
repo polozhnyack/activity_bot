@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, date, timedelta, timezone
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload, joinedload
-from sqlalchemy import case, update, delete, select, exists, func, distinct, nullslast
+from sqlalchemy import case, update, delete, select, exists, func, distinct, nullslast, asc, desc
 from sqlalchemy.exc import IntegrityError
 
 from typing import List, Union, Optional
@@ -93,7 +93,11 @@ class ChildService:
 
     async def get_all(self) -> list["Child"]:
         result = await self.session.execute(
-            select(Child).order_by(Child.full_name)
+            select(Child)
+            .where(Child.full_name.isnot(None))
+            .order_by(
+                func.lower(Child.full_name)
+            )
         )
         return result.scalars().all()
     
@@ -159,23 +163,111 @@ class ChildService:
         return result.all()
 
 
-    # async def get_children_with_reports_in_review(
-    #     self,
-    #     level_id: int
-    # ) -> list[Child]:
-    #     stmt = (
-    #         select(Child)
-    #         .join(Report, Report.child_id == Child.code)
-    #         .where(
-    #             Report.status == ReportStatus.in_review,
-    #             Child.level_id == level_id
-    #         )
-    #         .distinct()
-    #     )
+    async def get_month_progress(
+        self,
+        *,
+        child_id: str,
+        month: str,  # YYYY-MM
+    ) -> int:
 
-    #     result = await self.session.scalars(stmt)
-    #     return result.all()
+        child = await self.session.scalar(
+            select(Child).where(Child.code == child_id)
+        )
 
+        if not child or not child.level_id:
+            return 0
+
+        total_exercises = await self.session.scalar(
+            select(func.count(Exercise.id))
+            .where(Exercise.level_id == child.level_id)
+        )
+
+        if not total_exercises:
+            return 0
+
+        completed_exercises = await self.session.scalar(
+            select(func.count(distinct(Photo.exercise_id)))
+            .join(Report, Report.id == Photo.report_id)
+            .where(
+                Report.child_id == child_id,
+                Report.month == month,
+                Photo.exercise_id.in_(
+                    select(Exercise.id).where(Exercise.level_id == child.level_id)
+                )
+            )
+        )
+
+        percent = int((completed_exercises / total_exercises) * 100)
+        return percent
+    
+
+    async def get_month_progress_bulk(
+        self,
+        *,
+        month: str,
+    ) -> dict[str, int]:
+        total_result = await self.session.execute(
+            select(
+                Exercise.level_id,
+                func.count(Exercise.id)
+            ).group_by(Exercise.level_id)
+        )
+        total_rows = total_result.fetchall()
+        total_by_level = {level_id: count for level_id, count in total_rows}
+
+        rows_result = await self.session.execute(
+            select(
+                Report.child_id,
+                Exercise.level_id,
+                func.count(func.distinct(Photo.exercise_id)).label("done")
+            )
+            .join(Photo, Photo.report_id == Report.id)
+            .join(Exercise, Exercise.id == Photo.exercise_id)
+            .where(Report.month == month)
+            .group_by(Report.child_id, Exercise.level_id)
+        )
+        rows = rows_result.fetchall()
+
+        result = {}
+
+        for child_id, level_id, done in rows:
+            total = total_by_level.get(level_id, 0)
+            percent = int((done / total) * 100) if total else 0
+            result[child_id] = percent
+
+        return result
+
+
+    async def get_neighbors(self, child_code: str):
+        child = await self.session.get(Child, child_code)
+
+        name_key = func.lower(child.full_name)
+
+        prev_child = (
+            await self.session.execute(
+                select(Child)
+                .where(
+                    Child.full_name.isnot(None),
+                    func.lower(Child.full_name) < name_key
+                )
+                .order_by(func.lower(Child.full_name).desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+
+        next_child = (
+            await self.session.execute(
+                select(Child)
+                .where(
+                    Child.full_name.isnot(None),
+                    func.lower(Child.full_name) > name_key
+                )
+                .order_by(func.lower(Child.full_name).asc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+
+        return prev_child, next_child
 
 
     async def get_monthly_plan(self, child_id: str, month: str | None = None):

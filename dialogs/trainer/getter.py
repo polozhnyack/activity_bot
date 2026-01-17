@@ -4,51 +4,64 @@ from logger import logger
 from aiogram_dialog.api.entities import MediaAttachment, MediaId
 from aiogram.enums import ContentType
 
+from utils import progress_to_emoji, get_month_name
+
 
 async def months_getter(dialog_manager, **kwargs):
-    from datetime import datetime
-    
-    months_names = [
-        "Январь", "Февраль", "Март", "Апрель",
-        "Май", "Июнь", "Июль", "Август", 
-        "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
-    ]
-    
-    current_date = datetime.now()
-    current_month = current_date.month
-    current_year = current_date.year
-    
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+
     months = [
-        {"id": month_number, "name": f"{months_names[month_number-1]}"}
-        for month_number in range(1, 13)
+        {
+            "id": m,
+            "name": (
+                f"🎯 {get_month_name(m)}"
+                if m == current_month
+                else get_month_name(m)
+            )
+        }
+        for m in range(1, 13)
     ]
-    
-    months.append({
-        "id": f"{current_month}",
-        "name": f"🎯 {months_names[current_month-1]} (Текущий)"
-    })
-    
-    months_sorted = sorted(months, key=lambda x: (isinstance(x["id"], str), x["id"]))
-    
-    return {"months": months_sorted}
+
+    return {
+        "months": months,
+        "year": current_year
+        }
 
 
 async def get_childs_btn(dialog_manager: DialogManager, **kwargs):
     service: ChildService = dialog_manager.middleware_data["ChildService"]
+
+    selected_month = dialog_manager.dialog_data["selected_month"]
+    year = datetime.now().year
+    month_db = f"{year}-{selected_month:02d}"
+
     childs: list[Child] = await service.get_all()
+    progress_map = await service.get_month_progress_bulk(month=month_db)
+
     childs = [c for c in childs if c.full_name]
 
-    page_size = 10
+    page_size = 20
     total_pages = (len(childs) - 1) // page_size + 1
 
-    show_pager = total_pages > 1
+    month_name = get_month_name(int(selected_month))
 
     return {
-        "show_pager": show_pager,
-        "childs": childs,
+        "show_pager": total_pages > 1,
+        "childs": [
+            {
+                "full_name": c.full_name,
+                "code": c.code,
+                "progress": progress_map.get(c.code, 0),
+                "progress_emoji": progress_to_emoji(progress_map.get(c.code, 0))
+            }
+            for c in childs
+        ],
         "current_page": 0,
-        "total_pages": total_pages
+        "total_pages": total_pages,
+        "month_view": f"{month_name} {year}"
     }
+
 
 
 async def get_childs_in_review_btn(dialog_manager: DialogManager, **kwargs):
@@ -76,6 +89,11 @@ async def get_child_data(dialog_manager: DialogManager, **kwargs):
         month=month_str
     )
     child: Child = await child_servise.get_by_code(child_code)
+    month_progerss_percent = await child_servise.get_month_progress(
+        child_id=child.code,
+        month=month_str
+    )
+    prev_child, next_child = await child_servise.get_neighbors(child_code)
 
     plans: MonthlyPlan = await child_servise.get_monthly_plan(
         child_id=child_code,
@@ -87,6 +105,23 @@ async def get_child_data(dialog_manager: DialogManager, **kwargs):
     else:
         month_plan = plans[0].notes if plans[0].notes else "-"
 
+    month_view = f"{get_month_name(int(selected_month))} {year}"
+
+    logger.debug(f"next_child_name: {next_child.full_name if next_child else None}")
+
+
+    child_scroller_items = []
+    if prev_child:
+        child_scroller_items.append({
+            "name": f"◀️ {prev_child.full_name}",
+            "code": prev_child.code
+        })
+    if next_child:
+        child_scroller_items.append({
+            "name": f"{next_child.full_name} ▶️",
+            "code": next_child.code
+        })
+
     return {
         "reports_count": len(reports_info["reports"]),
         "last_report_date": reports_info["last_report_date"],
@@ -94,7 +129,11 @@ async def get_child_data(dialog_manager: DialogManager, **kwargs):
         "level": child.level.name,
         "birth_date": child.birth_date.strftime("%d.%m.%Y") if child.birth_date else "не указано",
         "code": child.code,
-        "month_plan": month_plan
+        "month_plan": month_plan,
+        "month_view": month_view,
+        "month_progress_percent": month_progerss_percent,
+
+        "child_scroller_items": child_scroller_items,
     }
 
 

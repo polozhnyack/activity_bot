@@ -30,7 +30,7 @@ async def main():
     config: Config = load_config()
 
     await create_tables(config.db.url)
-    engine = create_async_engine(url = config.db.url, echo = False)
+    engine = create_async_engine(url = config.db.url, echo = False, pool_pre_ping=True, pool_recycle=1800)
     sessionmaker = async_sessionmaker(engine, expire_on_commit = False)
 
     bot = Bot(

@@ -19,7 +19,7 @@ services:
   #     - postgres_data:/var/lib/postgresql/data
   bot:
     build: .
-    container_name: my_python_bot
+    container_name: app
     restart: always
     env_file:
       - .env

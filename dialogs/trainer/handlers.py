@@ -456,3 +456,16 @@ async def plane_input_handler(message: Message, _: MessageInput, manager: Dialog
         logger.error(f"Не удалось добавить план на месяц.")
 
     await manager.switch_to(state=TrainerStates.child_card)
+
+
+async def child_scroll_on_page(    
+    callback: CallbackQuery,
+    widget: Select,
+    dialog_manager: DialogManager,
+    item_id: str,
+):
+    
+    dialog_manager.dialog_data["child_code"] = str(item_id)
+    await dialog_manager.switch_to(
+        state=TrainerStates.child_card
+    )

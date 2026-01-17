@@ -326,3 +326,26 @@ def generate_progress_html_vertical(data: dict, child_name: str = "ФИ ребё
 
     html_parts.append('</table></div></div>')
     return "\n".join(html_parts)
+
+
+
+MONTH_NAMES = [
+    "Январь", "Февраль", "Март", "Апрель",
+    "Май", "Июнь", "Июль", "Август",
+    "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+]
+
+def get_month_name(month_id: int) -> str:
+    if 1 <= month_id <= 12:
+        return MONTH_NAMES[month_id - 1]
+    raise ValueError(f"Неверный id месяца: {month_id}")
+
+
+def progress_to_emoji(p: int) -> str:
+    if p == 0:
+        return "⚪️"
+    if p < 40:
+        return "🔴"
+    if p < 70:
+        return "🟡"
+    return "🟢"
