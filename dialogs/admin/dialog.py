@@ -118,5 +118,4 @@ admin_window = Dialog(
         ),
         state=AdminState.user_select
     )
-
 )

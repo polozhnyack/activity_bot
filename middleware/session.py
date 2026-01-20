@@ -2,7 +2,7 @@ from typing import Callable, Awaitable, Dict, Any
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Update
 from sqlalchemy.ext.asyncio import async_sessionmaker
-from models.methods import UserService, ChildService, ExerciseService, ReportService
+from models.methods import UserService, ChildService, ExerciseService, ReportService, ActivityLogService
 
 import json
 
@@ -26,6 +26,7 @@ class DbSessionMiddleware(BaseMiddleware):
             data["ChildService"] = ChildService(session)
             data["ExerciseService"] = ExerciseService(session)
             data["ReportService"] = ReportService(session)
+            data["ActivityLogService"] = ActivityLogService(session)
 
             return await handler(event, data)
 

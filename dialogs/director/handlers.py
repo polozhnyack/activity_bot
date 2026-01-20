@@ -9,7 +9,7 @@ from aiogram_dialog.widgets.kbd import Select
 from dialogs.states import *
 from aiogram_dialog.widgets.input import MessageInput
 
-from models.methods import UserService, ChildService, ReportService
+from models.methods import UserService, ChildService, ReportService, ActivityLogService
 from models.models import *
 from config import load_config
 from logger import logger
@@ -325,6 +325,7 @@ async def on_edit_photo(message: Message, _: MessageInput, manager: DialogManage
         photo = message.photo[-1]
 
         service: ReportService = manager.middleware_data["ReportService"]
+        log_service: ActivityLogService = manager.middleware_data["ActivityLogService"]
 
         file_id = photo.file_id
         exercise = manager.dialog_data["selected_exercise"]
@@ -335,7 +336,7 @@ async def on_edit_photo(message: Message, _: MessageInput, manager: DialogManage
         logger.debug(f"{exercise} - {month} - {child_code}")
 
         if exercise and month and child_code and file_id:
-            await service.create_report_photo(
+            report = await service.create_report_photo(
                 user_id=message.from_user.id,
                 child_code=child_code,
                 photo_file_id=file_id,
@@ -343,8 +344,18 @@ async def on_edit_photo(message: Message, _: MessageInput, manager: DialogManage
                 month=month,
                 status=ReportStatus.in_review
             )
-
             await message.answer(f"✅ Фото сохранено!")
+
+            try:
+                await log_service.log(
+                    child_id=child_code,
+                    event_type=ActivityEventType.photo_uploaded,
+                    actor_id=message.from_user.id,
+                    entity_id=report.photos[0].id
+                )
+            except Exception as e:
+                logger.error(f"Не удалось обновить/установить фото для отчета {report.id}: {e}")
+
             await manager.switch_to(DirectorState.history_progress)
             return
 

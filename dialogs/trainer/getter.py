@@ -67,7 +67,7 @@ async def get_childs_btn(dialog_manager: DialogManager, **kwargs):
 async def get_childs_in_review_btn(dialog_manager: DialogManager, **kwargs):
     service: ChildService = dialog_manager.middleware_data["ChildService"]
 
-    childs: list[Child] = await service.get_children_with_reports_in_review()
+    childs: list[Child] = await service.get_children_with_reports_in_review(int(dialog_manager.event.from_user.id))
     childs = [c for c in childs if c.full_name]
 
     return {
@@ -213,4 +213,6 @@ async def get_trainer_menu_data(dialog_manager: DialogManager, **kwargs):
 
     is_admin = user and user.role == UserRole.admin
 
-    return {"admin": is_admin}
+    return {
+        "admin": is_admin,
+        }

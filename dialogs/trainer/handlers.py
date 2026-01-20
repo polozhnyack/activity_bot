@@ -9,7 +9,7 @@ from aiogram_dialog.widgets.kbd import Select
 from dialogs.states import *
 from aiogram_dialog.widgets.input import MessageInput
 
-from models.methods import UserService, ChildService, ReportService, ExerciseService
+from models.methods import UserService, ChildService, ReportService, ExerciseService, ActivityLogService
 from models.models import *
 from config import load_config
 from logger import logger
@@ -271,12 +271,23 @@ async def on_add_comment(message: Message, _: MessageInput, manager: DialogManag
         return
 
     report_service: ReportService = manager.middleware_data["ReportService"]
+    log_service: ActivityLogService = manager.middleware_data["ActivityLogService"]
 
-    await report_service.add_comment(
+
+    com = await report_service.add_comment(
         report_id=report_id,
         author_id=message.from_user.id,
         text=message.text.strip(),
     )
+
+
+    await log_service.log(
+        child_id=manager.dialog_data.get("child_code"),
+        event_type=ActivityEventType.comment_added,
+        entity_id=com.id,
+        actor_id=message.from_user.id
+    )
+
 
     child_code = manager.dialog_data.get("child_code")
     selected_month = manager.dialog_data.get("selected_month")
@@ -371,6 +382,7 @@ async def select_sport_item_for_add_report(
         return
 
     report_service: ReportService = manager.middleware_data["ReportService"]
+    log_service: ActivityLogService = manager.middleware_data["ActivityLogService"]
 
     photo = message.photo[-1]
     file_id = photo.file_id
@@ -380,7 +392,7 @@ async def select_sport_item_for_add_report(
 
     logger.debug(f"Получено фото: {file_id}, подпись: {caption}")
 
-    await report_service.create_report_photo(
+    report = await report_service.create_report_photo(
         user_id=message.from_user.id,
         child_code=manager.dialog_data.get("child_code"),
         photo_file_id=file_id,
@@ -388,6 +400,13 @@ async def select_sport_item_for_add_report(
         trainer_id=message.from_user.id,
         month=selected_month,
         comment_text=caption
+    )
+
+    await log_service.log(
+        child_id=manager.dialog_data.get("child_code"),
+        event_type=ActivityEventType.report_created,
+        entity_id=report.id,
+        actor_id=message.from_user.id
     )
 
     await message.answer("✅ Отчет добавлен.")
@@ -401,6 +420,7 @@ async def on_confirm_close(callback: CallbackQuery, button, dialog_manager: Dial
     trainer_id = callback.from_user.id
 
     service: ReportService = dialog_manager.middleware_data["ReportService"]
+    # log_service: ActivityLogService = dialog_manager.middleware_data["ActivityLogService"]
 
     year = datetime.now().year
     month_str = f"{year}-{month:02d}" 
@@ -438,6 +458,7 @@ async def plane_input_handler(message: Message, _: MessageInput, manager: Dialog
 
     plan = message.text.strip()
     child_service: ChildService = manager.middleware_data["ChildService"]
+    log_service: ActivityLogService = manager.middleware_data["ActivityLogService"]
 
     month = manager.dialog_data["selected_month"]
     child_id = manager.dialog_data["child_code"]
@@ -446,12 +467,20 @@ async def plane_input_handler(message: Message, _: MessageInput, manager: Dialog
     month_str = f"{year}-{month:02d}" 
 
     try:
-        await child_service.set_monthly_plan(
+        plan = await child_service.set_monthly_plan(
             child_id=child_id,
             month=month_str,
             notes=plan
         )
         await message.answer("✅ План на месяц успешно добавлен.")
+
+        await log_service.log(
+            child_id=child_id,
+            event_type=ActivityEventType.ofp_added,
+            actor_id=message.from_user.id,
+            entity_id=plan.id
+        )
+        
     except Exception as e:
         logger.error(f"Не удалось добавить план на месяц.")
 

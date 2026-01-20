@@ -126,8 +126,11 @@ async def user_contact_handler(
         if updated:
             chat: Chat = await message.bot.get_chat(user_id)
             full_name = getattr(chat, "full_name", f"ID {user_id}")
+
+            role_enum = UserRole(selected_role.lower())
+            role_title = ROLE_NAMES.get(role_enum, selected_role)
             await message.answer(
-                f"✅ Пользователю {full_name} успешно присвоена роль: {selected_role.capitalize()}"
+                f"✅ Пользователю {full_name} успешно присвоена роль: {role_title}"
             )
         else:
             await message.answer(

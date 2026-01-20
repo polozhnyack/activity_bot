@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime, date
 from sqlalchemy import (
-    Column, Integer, String, DateTime, ForeignKey, Enum, Date, Text, BigInteger
+    Column, Integer, String, DateTime, ForeignKey, Enum, Date, Text, BigInteger, JSON
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column, declarative_base
 from typing import Optional
@@ -18,6 +18,16 @@ class UserRole(enum.Enum):
     director_novice = "director_novice"
     director_pro = "director_pro"
     admin = "admin"
+
+
+ROLE_NAMES = {
+    UserRole.parent: "👨‍👩‍👧 Родитель",
+    UserRole.trainer: "💪 Тренер",
+    UserRole.director_novice: "🎓 Директор (новички)",
+    UserRole.director_pro: "🏆 Директор (PRO)",
+    UserRole.admin: "🛠 Администратор",
+}
+
 
 class ReportStatus(enum.Enum):
     draft = "draft"
@@ -133,3 +143,64 @@ class Level(Base):
     children: Mapped[list["Child"]] = relationship("Child", back_populates="level")
     exercises: Mapped[list["Exercise"]] = relationship("Exercise", back_populates="level")
 
+
+ROLE_LEVEL_IDS_MAP = {
+    UserRole.director_novice: [3, 4],
+    UserRole.director_pro: [2],
+}
+
+
+
+class ActivityEventType(enum.Enum):
+    photo_uploaded = "photo_uploaded"
+    comment_added = "comment_added"
+    report_created = "report_created"
+    report_in_review = "report_in_review"
+    report_sent = "report_sent"
+
+    ofp_added = "ofp_added"
+
+
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    # Ребёнок
+    child_id: Mapped[str] = mapped_column(
+        ForeignKey("children.code"),
+        nullable=False,
+        index=True,
+    )
+
+    # Тип события
+    event_type: Mapped[ActivityEventType] = mapped_column(
+        Enum(ActivityEventType),
+        nullable=False,
+        index=True,
+    )
+
+    # photo.id / comment.id / report.id
+    entity_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    # Кто совершил действие
+    actor_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    actor_role: Mapped[UserRole] = mapped_column(
+        Enum(UserRole),
+        nullable=False,
+    )
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.now,
+        index=True,
+    )
+
+    child: Mapped["Child"] = relationship("Child")
+    actor: Mapped["User"] = relationship("User")

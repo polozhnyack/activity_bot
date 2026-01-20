@@ -1,5 +1,6 @@
 from aiogram_dialog import DialogManager
 from models.methods import *
+from models.models import ROLE_NAMES
 from logger import logger
 
 
@@ -14,18 +15,10 @@ async def child_create_delete_getter(dialog_manager: DialogManager, **kwargs) ->
 
 
 async def get_roles_data(dialog_manager: DialogManager, **kwargs):
-    role_names = {
-        "parent": "👨‍👩‍👧 Родитель",
-        "trainer": "💪 Тренер",
-        "director_novice": "🎓 Директор (новички)",
-        "director_pro": "🏆 Директор (PRO)",
-        "admin": "🛠 Администратор",
-    }
-
     return {
         "role_editor_text": "Выберите роль, которую хотите назначить 👇",
         "roles": [
-            (role_names[role.value], role.value)
+            (ROLE_NAMES[role], role.value)
             for role in UserRole
             if role.value != "director"
         ],

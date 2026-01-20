@@ -23,6 +23,8 @@ services:
     restart: always
     env_file:
       - .env
+    environment:
+      - TZ=Europe/Moscow
     volumes:
       - .:/app
     command: python bot.py

@@ -1,5 +1,6 @@
 from aiogram_dialog import DialogManager
 from models.methods import *
+from models.models import ROLE_NAMES
 from logger import logger
 
 from utils import format_chat_username
@@ -11,11 +12,18 @@ from aiogram.types import ContentType
 async def get_count_in_review(dialog_manager: DialogManager, **kwargs):
 
     service: ReportService = dialog_manager.middleware_data["ReportService"]
+    user_service: UserService = dialog_manager.middleware_data["UserService"]
 
-    count = await service.get_reports_in_review_count()
+    user = await user_service.get_by_id(dialog_manager.event.from_user.id)
+    if user.role not in (UserRole.director_novice, UserRole.director_pro):
+        return
+    
+    count = await service.get_reports_in_review_count(int(dialog_manager.event.from_user.id))
+
 
     return {
-        "count_in_review": count
+        "count_in_review": count,
+        "director_role": ROLE_NAMES.get(user.role)
     }
 
 

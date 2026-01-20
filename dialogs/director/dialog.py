@@ -59,8 +59,8 @@ prod_scroller = ScrollingGroup(
 
 director_dialog = Dialog(
     Window(
-        Const(
-            "<b>👨‍💼 Роль: Спортивный директор</b>\n\n"
+        Format(
+            "<b>👨‍💼 Роль: {director_role}</b>\n\n"
             "Вы можете:\n"
             "• просматривать все отчёты на проверке;\n"
             "• видеть текущие данные и прогресс ребёнка;\n"
@@ -74,7 +74,7 @@ director_dialog = Dialog(
         #     on_click=lambda c, b, m: m.start(state=TrainerStates.select_month)
         # ),
         Button(
-            text=Format("📝 Ждут проверки: {count_in_review}"),
+            text=Format("📝 Ждут проверки: {count_in_review} детей"),
             id="In_review",
             when=lambda data, *args: int(data.get("count_in_review", 0)) > 0,
             on_click=lambda c, b, m: m.switch_to(state=DirectorState.reports_child)

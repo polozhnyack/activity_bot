@@ -151,16 +151,68 @@ class ChildService:
         return True
 
 
-    async def get_children_with_reports_in_review(self):
+    # async def get_children_with_reports_in_review(self):
+    #     stmt = (
+    #         select(Child)
+    #         .join(Report, Report.child_id == Child.code)
+    #         .where(Report.status == ReportStatus.in_review)
+    #         .order_by(nullslast(Child.full_name.asc()))
+    #         .distinct()
+    #     )
+    #     result = await self.session.scalars(stmt)
+    #     return result.all()
+
+
+    # async def get_children_with_reports_in_review(self, user_id: int):
+    #     user = await self.session.get(User, user_id)
+    #     if not user:
+    #         return []
+
+    #     level_ids = ROLE_LEVEL_IDS_MAP.get(user.role)
+    #     if not level_ids:
+    #         return []
+
+    #     stmt = (
+    #         select(Child)
+    #         .join(Report, Report.child_id == Child.code)
+    #         .where(
+    #             Report.status == ReportStatus.in_review,
+    #             Child.level_id.in_(level_ids),
+    #         )
+    #         .group_by(Child.code)
+    #         .order_by(nullslast(Child.full_name.asc()))
+    #     )
+
+    #     result = await self.session.scalars(stmt)
+    #     return result.all()
+
+
+    async def get_children_with_reports_in_review(self, user_id: int):
+        user = await self.session.get(User, user_id)
+        if not user:
+            return []
+
+        level_ids = ROLE_LEVEL_IDS_MAP.get(user.role)
+        if not level_ids:
+            return []
+
+        # выбираем всех детей, у которых есть хотя бы один отчет in_review
         stmt = (
             select(Child)
-            .join(Report, Report.child_id == Child.code)
-            .where(Report.status == ReportStatus.in_review)
+            .where(
+                Child.level_id.in_(level_ids),
+                exists().where(
+                    (Report.child_id == Child.code) &
+                    (Report.status == ReportStatus.in_review)
+                )
+            )
             .order_by(nullslast(Child.full_name.asc()))
-            .distinct()
         )
+
         result = await self.session.scalars(stmt)
         return result.all()
+
+
 
 
     async def get_month_progress(
@@ -280,7 +332,7 @@ class ChildService:
         return plans
     
 
-    async def set_monthly_plan(self, child_id: str, month: str, notes: str):
+    async def set_monthly_plan(self, child_id: str, month: str, notes: str) -> MonthlyPlan:
         query = await self.session.execute(
             select(MonthlyPlan).where(MonthlyPlan.child_id == child_id, MonthlyPlan.month == month)
         )
@@ -555,10 +607,36 @@ class ReportService:
 
         
     
-    async def get_reports_in_review_count(self) -> int:
-        stmt = select(func.count()).select_from(Report).where(Report.status == ReportStatus.in_review)
+    # async def get_reports_in_review_count(self) -> int:
+    #     stmt = select(func.count()).select_from(Report).where(Report.status == ReportStatus.in_review)
+    #     result = await self.session.execute(stmt)
+    #     return result.scalar_one()
+
+    async def get_reports_in_review_count(self, user_id: int) -> int:
+        user = await self.session.get(User, user_id)
+        if not user:
+            return 0
+
+        level_ids = ROLE_LEVEL_IDS_MAP.get(user.role)
+        if not level_ids:
+            return 0
+
+        stmt = (
+            select(func.count())
+            .select_from(Child)
+            .where(
+                Child.level_id.in_(level_ids),
+                exists().where(
+                    (Report.child_id == Child.code) &
+                    (Report.status == ReportStatus.in_review)
+                )
+            )
+        )
+
         result = await self.session.execute(stmt)
         return result.scalar_one()
+
+
 
 
     async def get_reports_grouped_review(self, child_id: str):
@@ -766,3 +844,35 @@ class ExerciseService:
         )
         exercise_name = result.scalar_one_or_none()
         return exercise_name
+    
+
+@dataclass
+class ActivityLogService:
+    session: AsyncSession
+
+    async def log(
+        self,
+        *,
+        child_id: str,
+        event_type: ActivityEventType,
+        actor_id: int,
+        entity_id: int | None = None,
+        meta: dict | None = None,
+    ) -> ActivityLog:
+        user: User = await self.session.get(User, actor_id)
+        if not user:
+            raise ValueError(f"User {actor_id} not found")
+
+        log = ActivityLog(
+            child_id=child_id,
+            event_type=event_type,
+            entity_id=entity_id,
+            actor_id=user.id,
+            actor_role=user.role,
+            meta=meta or {},
+        )
+
+        self.session.add(log)
+        await self.session.commit()
+
+        return log

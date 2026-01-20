@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dialogs.states import *
 
-from models.methods import UserService, ChildService, ReportService
+from models.methods import UserService, ChildService, ReportService, ActivityLogService
 from models.models import *
 from config import load_config
 from logger import logger
@@ -61,7 +61,7 @@ async def command_start_process(
     if user.role and user.role != UserRole.parent:
         if user.role == UserRole.trainer:
             await dialog_manager.start(state=TrainerStates.trainer_menu)
-        elif user.role == UserRole.director:
+        elif user.role in (UserRole.director_novice, UserRole.director_pro):
             await dialog_manager.start(state=DirectorState.director_menu)
         elif user.role == UserRole.admin:
             await dialog_manager.start(state=AdminState.admin_menu)
@@ -202,6 +202,7 @@ async def on_photo_input(message: Message, _: MessageInput, manager: DialogManag
     photo = message.photo[-1]
 
     service: ReportService = manager.middleware_data["ReportService"]
+    log_service: ActivityLogService = manager.middleware_data["ActivityLogService"]
 
     file_id = photo.file_id
     exercise = manager.dialog_data["selected_exercise"]
@@ -209,16 +210,26 @@ async def on_photo_input(message: Message, _: MessageInput, manager: DialogManag
     child_code = manager.dialog_data["child_code"]
 
     if exercise and month and child_code and file_id:
-        await service.create_report_photo(
+
+        report = await service.create_report_photo(
             user_id=message.from_user.id,
             child_code=child_code,
             photo_file_id=file_id,
             exercise_id=exercise,
             month=month
         )
-
         await message.answer(f"✅ Фото сохранено!")
-        await manager.switch_to(ChildInfo.start_info)
 
+        try:
+            await log_service.log(
+                child_id=child_code,
+                event_type=ActivityEventType.photo_uploaded,
+                actor_id=message.from_user.id,
+                entity_id=report.id
+            )
+        except Exception as e:
+            logger.error(f"Не удалось записать лог фото: {e}")
+
+        await manager.switch_to(ChildInfo.start_info)
     else: 
         await message.answer(f"❌ <b>Произошла ошибка при сохранении фото!</b>\n\nПопробуйте повторить попытку позже.")
