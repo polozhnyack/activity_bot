@@ -15,8 +15,8 @@ class UserRole(enum.Enum):
     parent = "parent"
     trainer = "trainer"
     director = "director"
-    # director_novice = "director_novice"
-    # director_pro = "director_pro"
+    director_novice = "director_novice"
+    director_pro = "director_pro"
     admin = "admin"
 
 class ReportStatus(enum.Enum):

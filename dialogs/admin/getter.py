@@ -17,7 +17,8 @@ async def get_roles_data(dialog_manager: DialogManager, **kwargs):
     role_names = {
         "parent": "👨‍👩‍👧 Родитель",
         "trainer": "💪 Тренер",
-        "director": "🎓 Директор",
+        "director_novice": "🎓 Директор (новички)",
+        "director_pro": "🏆 Директор (PRO)",
         "admin": "🛠 Администратор",
     }
 
@@ -26,7 +27,7 @@ async def get_roles_data(dialog_manager: DialogManager, **kwargs):
         "roles": [
             (role_names[role.value], role.value)
             for role in UserRole
-            # if role.value != "admin"
+            if role.value != "director"
         ],
     }
 
