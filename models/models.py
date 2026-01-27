@@ -157,8 +157,10 @@ class ActivityEventType(enum.Enum):
     report_created = "report_created"
     report_in_review = "report_in_review"
     report_sent = "report_sent"
-
     ofp_added = "ofp_added"
+
+    photo_edit = "photo_edit"
+    
 
 
 class ActivityLog(Base):

@@ -77,10 +77,10 @@ child_info_dialog=Dialog(
     ),
     Window(
         Format("📌 Вы выбрали элемент: <b>{element_name}</b>\n\n"
-               "📷 Отправьте фото для добавления в отчёт."),
+               "📷 Отправьте фото или альбом для добавления в отчёт."),
         MessageInput(
             on_photo_input,
-            content_types=ContentType.PHOTO
+            # content_types=ContentType.PHOTO
         ),
         Button(
             text=Const("⬅️ Назад"),

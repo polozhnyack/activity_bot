@@ -225,9 +225,10 @@ trainer_dialog = Dialog(
         getter=get_exercise_btn
     ),
     Window(
-        Const(
-            "📸 <b>Пожалуйста, отправьте фото — с подписью или без неё</b>\n\n"
-            "Вы можете добавить комментарий к фото позже, если захотите."
+        Format(
+            "📸 <b>Отправьте фото или фотоальбом — с подписью или без неё</b>\n\n"
+            "🤸‍♀️ Элемент тренировки: <b>{element_name}</b>\n\n"
+            "Вы можете добавить комментарий к фото позже."
         ),
         Button(
             text=Const("⬅️ Назад"),
@@ -236,9 +237,10 @@ trainer_dialog = Dialog(
         ),
         MessageInput(
             select_sport_item_for_add_report,
-            content_types=ContentType.PHOTO
+            # content_types=ContentType.PHOTO
         ),
-        state=TrainerStates.add_report
+        state=TrainerStates.add_report,
+        getter=get_exercise_text
     ),
     Window(
         Format("{text}"),

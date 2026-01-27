@@ -4,6 +4,8 @@ from aiogram_dialog.widgets.input import MessageInput
 from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery, LabeledPrice
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.base import StorageKey
+from aiogram.exceptions import TelegramBadRequest
 
 from aiogram_dialog.widgets.kbd import Button, Select
 
@@ -16,6 +18,9 @@ from models.models import *
 from config import load_config
 from logger import logger
 from blockmanager import BlockManager
+
+import asyncio
+from collections import defaultdict
 
 
 router = Router()
@@ -194,42 +199,190 @@ async def on_exercise_selected(
     await dialog_manager.switch_to(state=ChildInfo.wait_photo)
 
 
-async def on_photo_input(message: Message, _: MessageInput, manager: DialogManager):
-    if message.media_group_id:
-        await message.answer("⚠️ Пожалуйста, отправьте только одно фото.")
-        return
+# async def on_photo_input(message: Message, _: MessageInput, manager: DialogManager):
+#     # if message.media_group_id:
+#     #     await message.answer("⚠️ Пожалуйста, отправьте только одно фото.")
+#     #     return
     
-    photo = message.photo[-1]
+#     photo = message.photo[-1]
 
+#     service: ReportService = manager.middleware_data["ReportService"]
+#     log_service: ActivityLogService = manager.middleware_data["ActivityLogService"]
+
+#     file_id = photo.file_id
+#     exercise = manager.dialog_data["selected_exercise"]
+#     month = manager.dialog_data["selected_month"]
+#     child_code = manager.dialog_data["child_code"]
+
+#     if exercise and month and child_code and file_id:
+
+#         report = await service.create_report_photo(
+#             user_id=message.from_user.id,
+#             child_code=child_code,
+#             photo_file_id=file_id,
+#             exercise_id=exercise,
+#             month=month
+#         )
+#         await message.answer(f"✅ Фото сохранено!")
+
+#         try:
+#             await log_service.log(
+#                 child_id=child_code,
+#                 event_type=ActivityEventType.photo_uploaded,
+#                 actor_id=message.from_user.id,
+#                 entity_id=report.id
+#             )
+#         except Exception as e:
+#             logger.error(f"Не удалось записать лог фото: {e}")
+
+#         await manager.switch_to(ChildInfo.start_info)
+#     else: 
+#         await message.answer(f"❌ <b>Произошла ошибка при сохранении фото!</b>\n\nПопробуйте повторить попытку позже.")
+
+
+# Глобальный счетчик для медиагрупп
+media_group_stats = defaultdict(lambda: {'count': 0, 'task': None, 'status_message_id': None, 'next_state': None})
+
+async def on_photo_input(message: Message, _: MessageInput, manager: DialogManager, next_state: type = None):
+    storage = manager.middleware_data['fsm_storage']
+    key = StorageKey(
+        chat_id=message.chat.id,
+        user_id=message.from_user.id,
+        bot_id=manager.event.bot.id
+    )
+    state = FSMContext(storage=storage, key=key)
+    
+    data = await state.get_data()
+
+    context = manager.current_context()
+    stack_id= context.stack_id
+    
+    if message.media_group_id:
+        group_key = f"{message.from_user.id}_{message.chat.id}_{message.media_group_id}"
+        
+        media_group_stats[group_key]['count'] += 1
+        if next_state:
+            media_group_stats[group_key]['next_state'] = next_state
+        
+        await save_photo(message, manager)
+        
+        current_group = data.get('current_media_group')
+        
+        if current_group == message.media_group_id:
+            if media_group_stats[group_key]['task']:
+                media_group_stats[group_key]['task'].cancel()
+            
+            media_group_stats[group_key]['task'] = asyncio.create_task(
+                send_group_report(
+                    group_key=group_key, 
+                    message=message, 
+                    state=state,
+                    manager=manager
+                    )
+            )
+            return
+        
+        status_msg = await message.bot.send_message(
+            chat_id=message.from_user.id,
+            text="📤 Начата загрузка альбома..."
+            
+            )
+        media_group_stats[group_key]['status_message_id'] = status_msg.message_id
+        
+        await state.update_data(current_media_group=message.media_group_id, status_msg_id=status_msg.message_id, stack_id=stack_id, next_state=next_state, dialog_manager=manager)
+
+        logger.debug(status_msg.message_id)
+        
+        media_group_stats[group_key]['task'] = asyncio.create_task(
+            send_group_report(
+                group_key=group_key, 
+                message=message, 
+                state=state, 
+                manager=manager,
+                status_message_id=status_msg.message_id)
+        )
+    else:
+        await save_photo(message, manager)
+        await message.answer("✅ Фото сохранено!")
+        if next_state:
+            await manager.switch_to(state=next_state)
+
+
+
+async def send_group_report(group_key: str, message: Message, state: FSMContext, manager: DialogManager, status_message_id: int = None):
+    """Отправляем отчет о сохранении группы фото"""
+    await asyncio.sleep(2)
+
+    data = await state.get_data()
+    try:
+        count = media_group_stats[group_key]['count']
+        status_msg_id = data.get("status_msg_id")
+
+        if count > 0:
+            if count == 1:
+                text = "✅ Фото сохранено!"
+            elif count < 5:
+                text = f"✅ <b>Сохранено {count} фото!</b>\n\nВы можете продолжить загрузку фото или выйти из режима."
+            else:
+                text = f"✅ <b>Сохранен альбом из {count} фото!</b>\n\nВы можете продолжить загрузку фото или выйти из режима."
+            
+            if status_msg_id:
+                try:
+                    await message.bot.edit_message_text(
+                        chat_id=message.chat.id,
+                        message_id=status_msg_id,
+                        text=text,
+                        parse_mode="HTML"
+                    )
+                except TelegramBadRequest as e:
+                    if "message to edit not found" in str(e) or "message is not modified" in str(e):
+                        await message.answer(text)
+                        logger.warning(f"status_message_id: {status_msg_id}, {e}")
+                    else:
+                        raise
+            else:
+                logger.warning(f"status_message_id: {status_msg_id}")
+                await message.answer(text)
+
+        next_state = media_group_stats[group_key].get('next_state')
+
+        if group_key in media_group_stats:
+            if media_group_stats[group_key]['task']:
+                media_group_stats[group_key]['task'].cancel()
+            del media_group_stats[group_key]
+        
+        await state.update_data(current_media_group=None)
+        
+    except Exception as e:
+        logger.error(f"Ошибка при отправке отчета о медиагруппе: {e}")
+
+
+async def save_photo(message: Message, manager: DialogManager):
+    """Сохраняем фото в БД"""
     service: ReportService = manager.middleware_data["ReportService"]
     log_service: ActivityLogService = manager.middleware_data["ActivityLogService"]
-
-    file_id = photo.file_id
+    
     exercise = manager.dialog_data["selected_exercise"]
     month = manager.dialog_data["selected_month"]
     child_code = manager.dialog_data["child_code"]
-
-    if exercise and month and child_code and file_id:
-
-        report = await service.create_report_photo(
-            user_id=message.from_user.id,
-            child_code=child_code,
-            photo_file_id=file_id,
-            exercise_id=exercise,
-            month=month
+    
+    photo = message.photo[-1]
+    report = await service.create_report_photo(
+        user_id=message.from_user.id,
+        child_code=child_code,
+        photo_file_id=photo.file_id,
+        exercise_id=exercise,
+        month=month
+    )
+    
+    try:
+        await log_service.log(
+            child_id=child_code,
+            event_type=ActivityEventType.photo_uploaded,
+            actor_id=message.from_user.id,
+            entity_id=report.id
         )
-        await message.answer(f"✅ Фото сохранено!")
-
-        try:
-            await log_service.log(
-                child_id=child_code,
-                event_type=ActivityEventType.photo_uploaded,
-                actor_id=message.from_user.id,
-                entity_id=report.id
-            )
-        except Exception as e:
-            logger.error(f"Не удалось записать лог фото: {e}")
-
-        await manager.switch_to(ChildInfo.start_info)
-    else: 
-        await message.answer(f"❌ <b>Произошла ошибка при сохранении фото!</b>\n\nПопробуйте повторить попытку позже.")
+    except Exception as e:
+        logger.error(f"Не удалось записать лог фото: {e}")
+    
+    return report

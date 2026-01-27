@@ -8,6 +8,7 @@ from aiogram_dialog.widgets.kbd import Select
 
 from dialogs.states import *
 from aiogram_dialog.widgets.input import MessageInput
+from dialogs.main.handlers import on_photo_input
 
 from models.methods import UserService, ChildService, ReportService, ExerciseService, ActivityLogService
 from models.models import *
@@ -254,6 +255,8 @@ async def on_exercise_selected(
         await dialog_manager.switch_to(state=TrainerStates.history_progress)
 
     elif widget.widget_id == "select_sport_item_for_add_report":
+
+        # await dialog_manager.dialog_data["ex_name"] = 
         await dialog_manager.switch_to(state=TrainerStates.add_report)
 
 
@@ -372,45 +375,59 @@ async def on_delete_report(event, widget, dialog_manager: DialogManager, **kwarg
     await dialog_manager.update(data=dialog_manager.dialog_data)
 
 
+# async def select_sport_item_for_add_report(
+#     message: Message,
+#     _: MessageInput,
+#     manager: DialogManager
+# ):
+#     if not message.photo:
+#         await message.answer("❌ Пожалуйста, отправьте именно фото.")
+#         return
+
+#     report_service: ReportService = manager.middleware_data["ReportService"]
+#     log_service: ActivityLogService = manager.middleware_data["ActivityLogService"]
+
+#     photo = message.photo[-1]
+#     file_id = photo.file_id
+#     caption = message.caption or None
+#     selected_month = manager.dialog_data.get("selected_month")
+
+
+#     logger.debug(f"Получено фото: {file_id}, подпись: {caption}")
+
+#     report = await report_service.create_report_photo(
+#         user_id=message.from_user.id,
+#         child_code=manager.dialog_data.get("child_code"),
+#         photo_file_id=file_id,
+#         exercise_id=manager.dialog_data["selected_exercise"],
+#         trainer_id=message.from_user.id,
+#         month=selected_month,
+#         comment_text=caption
+#     )
+
+#     await log_service.log(
+#         child_id=manager.dialog_data.get("child_code"),
+#         event_type=ActivityEventType.report_created,
+#         entity_id=report.id,
+#         actor_id=message.from_user.id
+#     )
+
+#     await message.answer("✅ Отчет добавлен.")
+#     await manager.switch_to(state=TrainerStates.child_card)
+
+
 async def select_sport_item_for_add_report(
     message: Message,
     _: MessageInput,
     manager: DialogManager
 ):
-    if not message.photo:
-        await message.answer("❌ Пожалуйста, отправьте именно фото.")
-        return
-
-    report_service: ReportService = manager.middleware_data["ReportService"]
-    log_service: ActivityLogService = manager.middleware_data["ActivityLogService"]
-
-    photo = message.photo[-1]
-    file_id = photo.file_id
-    caption = message.caption or None
-    selected_month = manager.dialog_data.get("selected_month")
-
-
-    logger.debug(f"Получено фото: {file_id}, подпись: {caption}")
-
-    report = await report_service.create_report_photo(
-        user_id=message.from_user.id,
-        child_code=manager.dialog_data.get("child_code"),
-        photo_file_id=file_id,
-        exercise_id=manager.dialog_data["selected_exercise"],
-        trainer_id=message.from_user.id,
-        month=selected_month,
-        comment_text=caption
+    await on_photo_input(
+        message=message,
+        _=_,
+        manager=manager,
+        next_state=TrainerStates.child_card
     )
 
-    await log_service.log(
-        child_id=manager.dialog_data.get("child_code"),
-        event_type=ActivityEventType.report_created,
-        entity_id=report.id,
-        actor_id=message.from_user.id
-    )
-
-    await message.answer("✅ Отчет добавлен.")
-    await manager.switch_to(state=TrainerStates.child_card)
 
 
 async def on_confirm_close(callback: CallbackQuery, button, dialog_manager: DialogManager):
