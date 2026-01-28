@@ -2,6 +2,9 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 
+class Err(StatesGroup):
+    err = State()
+
 class ParentRegistration(StatesGroup):
     input_code = State()
 

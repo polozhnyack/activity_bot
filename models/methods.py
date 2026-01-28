@@ -6,7 +6,8 @@ from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy import case, update, delete, select, exists, func, distinct, nullslast, asc, desc
 from sqlalchemy.exc import IntegrityError
 
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Tuple 
+
 from collections import defaultdict
 
 from .models import *
@@ -775,6 +776,58 @@ class ReportService:
 @dataclass
 class ExerciseService:
     session: AsyncSession
+
+
+    async def get_adjacent_reports(
+        self,
+        child_id: str,
+        exercise_id: int,
+        month: str,  # формат "YYYY-MM"
+        status: ReportStatus
+    ) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Возвращает кортеж (prev_month, next_month) для конкретного упражнения у ребенка.
+        Если отчет за предыдущий или следующий месяц отсутствует, возвращает None.
+        """
+
+        # Преобразуем строку в datetime
+        current_month_dt = datetime.strptime(month, "%Y-%m")
+
+        # Функция для сдвига месяца назад/вперед
+        def shift_month(dt: datetime, offset: int) -> str:
+            year = dt.year + (dt.month + offset - 1) // 12
+            month = (dt.month + offset - 1) % 12 + 1
+            return f"{year:04d}-{month:02d}"
+
+        prev_month_str = shift_month(current_month_dt, -1)
+        next_month_str = shift_month(current_month_dt, 1)
+
+        # Проверяем существование отчета для prev
+        prev_exists = await self.session.scalar(
+            select(Report.id).where(
+                Report.child_id == child_id,
+                Report.month == prev_month_str,
+                Report.status == status,
+                Report.photos.any(Photo.exercise_id == exercise_id)
+            ).limit(1)
+        )
+
+        # Проверяем существование отчета для next
+        next_exists = await self.session.scalar(
+            select(Report.id).where(
+                Report.child_id == child_id,
+                Report.month == next_month_str,
+                Report.status == status,
+                Report.photos.any(Photo.exercise_id == exercise_id)
+            ).limit(1)
+        )
+
+        return (
+            prev_month_str if prev_exists else None,
+            next_month_str if next_exists else None
+        )
+        
+
 
     async def get_all_for_select(self) -> list[tuple[str, int]]:
         result = await self.session.execute(select(Level.id, Level.name))

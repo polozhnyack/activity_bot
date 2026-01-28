@@ -296,14 +296,25 @@ async def on_edit_comment(message: Message, _: MessageInput, manager: DialogMana
         await message.answer("❌ Ошибка: отчет не выбран")
         return
     
-
     report_service: ReportService = manager.middleware_data["ReportService"]
+    log_service: ActivityLogService = manager.middleware_data["ActivityLogService"]
+    child_code = manager.dialog_data["child_code"]
 
-    await report_service.add_comment(
+    comment = await report_service.add_comment(
         report_id=report_id,
         author_id=message.from_user.id,
         text=message.text.strip(),
     )
+
+    try:
+        await log_service.log(
+            child_id=child_code,
+            event_type=ActivityEventType.comment_added,
+            actor_id=message.from_user.id,
+            entity_id=comment.id
+        )
+    except Exception as e:
+        logger.error(f"Не удалось обновить/установить комментарий для отчета {comment.id}: {e}")
 
     await message.answer("✅ Комментарий добавлен")
     await manager.switch_to(state=DirectorState.select_elements_in_review)
@@ -349,7 +360,7 @@ async def on_edit_photo(message: Message, _: MessageInput, manager: DialogManage
             try:
                 await log_service.log(
                     child_id=child_code,
-                    event_type=ActivityEventType.photo_uploaded,
+                    event_type=ActivityEventType.photo_edit,
                     actor_id=message.from_user.id,
                     entity_id=report.photos[0].id
                 )

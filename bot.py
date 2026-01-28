@@ -13,10 +13,11 @@ from middleware.session import DbSessionMiddleware, UpdateLoggerMiddleware
 
 
 from dialogs.main.handlers import router
-from dialogs.main.dialog import parent_reg, child_info_dialog
+from dialogs.main.dialog import parent_reg, child_info_dialog, err_window
 from dialogs.trainer.dialog import trainer_dialog, progress_history
 from dialogs.director.dialog import director_dialog
 from dialogs.admin.dialog import admin_window
+from err.dialog_error import router as err_router
 
 
 async def create_tables(url):
@@ -47,12 +48,14 @@ async def main():
 
     dp.include_router(router)
     dp.include_router(parent_reg)
+    dp.include_router(err_router)
 
     dp.include_router(child_info_dialog)
     dp.include_router(trainer_dialog)
     dp.include_router(director_dialog)
     dp.include_router(admin_window)
     dp.include_router(progress_history)
+    dp.include_router(err_window)
 
     setup_dialogs(dp)
 

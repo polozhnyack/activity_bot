@@ -335,10 +335,20 @@ MONTH_NAMES = [
     "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
 ]
 
-def get_month_name(month_id: int) -> str:
-    if 1 <= month_id <= 12:
-        return MONTH_NAMES[month_id - 1]
-    raise ValueError(f"Неверный id месяца: {month_id}")
+def get_month_name(month_id: int | str) -> str:
+    if isinstance(month_id, int):
+        if 1 <= month_id <= 12:
+            return MONTH_NAMES[month_id - 1]
+        raise ValueError(f"Неверный номер месяца: {month_id}")
+    
+    if isinstance(month_id, str):
+        try:
+            dt = datetime.strptime(month_id, "%Y-%m")
+            return MONTH_NAMES[dt.month - 1]
+        except ValueError:
+            raise ValueError(f"Неверный формат строки месяца: {month_id}. Ожидается 'YYYY-MM'")
+
+    raise TypeError(f"Неверный тип аргумента: {type(month_id)}")
 
 
 def progress_to_emoji(p: int) -> str:

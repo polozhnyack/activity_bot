@@ -4,7 +4,7 @@ from aiogram.types import Message, CallbackQuery
 from aiogram_dialog.api.entities.media import MediaAttachment, MediaId
 from aiogram.types import ContentType
 
-from aiogram_dialog.widgets.kbd import Select
+from aiogram_dialog.widgets.kbd import Select, Button
 
 from dialogs.states import *
 from aiogram_dialog.widgets.input import MessageInput
@@ -14,6 +14,10 @@ from models.methods import UserService, ChildService, ReportService, ExerciseSer
 from models.models import *
 from config import load_config
 from logger import logger
+
+from utils import get_month_name
+
+import re
 
 
 
@@ -136,10 +140,18 @@ async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
     report: Report = item["text"]
 
     dialog_manager.dialog_data["selected_report"] = int(report.id)
+    current_month = get_month_name(report.month)
 
     exercise_name = "-"
     if report.photos and report.photos[0].exercise_id:
         exercise_name = await ex_service.get_exercise_name_by_id(report.photos[0].exercise_id)
+
+    prev_month_str, next_month_str = await ex_service.get_adjacent_reports(
+        child_id=report.child_id,
+        exercise_id=report.photos[0].exercise_id,
+        month=report.month,
+        status=ReportStatus.draft
+    )
 
     text = (
         f"📅 <b>Отчёт за:</b> {report.month}\n"
@@ -148,13 +160,18 @@ async def get_current_history_item(dialog_manager: DialogManager, **kwargs):
         f"{report.comments[-1].text if report.comments else 'Нет комментариев'}"
     )
 
-
-    logger.debug(text)
+    dialog_manager.dialog_data["history_next_month_str"] = next_month_str
+    dialog_manager.dialog_data["history_prev_month_str"] = prev_month_str
+    dialog_manager.dialog_data["history_selected_ex_id"] = report.photos[0].exercise_id
 
     return {
-        "has_comment": bool(report.comments),
-        "text": text, 
-        "photo": media
+            "has_comment": bool(report.comments),
+            "text": text, 
+            "photo": media,
+
+            "current_month": current_month,
+            "next_month": get_month_name(next_month_str) if next_month_str else None,
+            "prev_month": get_month_name(prev_month_str)if prev_month_str else None,
         }
 
 
@@ -515,3 +532,34 @@ async def child_scroll_on_page(
     await dialog_manager.switch_to(
         state=TrainerStates.child_card
     )
+
+
+
+async def month_history(callback: CallbackQuery, button: Button, dialog_manager: DialogManager):
+
+    next_month_str = dialog_manager.dialog_data.get("history_next_month_str")
+    prev_month_str = dialog_manager.dialog_data.get("history_prev_month_str")
+    history_selected_ex_id = dialog_manager.dialog_data.get("history_selected_ex_id")
+
+    logger.debug(f"next_month_str: {next_month_str}, prev_month_str: {prev_month_str}")
+
+    selected_month = None
+    if button.widget_id == "prev_month":
+        selected_month = int(prev_month_str.split("-")[1])
+    elif button.widget_id == "next_month":
+        selected_month = int(next_month_str.split("-")[1])
+        
+    logger.debug(selected_month)
+
+
+    dialog_manager.dialog_data["selected_exercise"] = history_selected_ex_id
+    dialog_manager.dialog_data["selected_month"] = selected_month
+
+    button.widget_id = "exercise_select"
+    await on_exercise_selected(
+            callback,
+            widget=button,
+            dialog_manager=dialog_manager,
+            item_id=int(history_selected_ex_id),  
+        )
+

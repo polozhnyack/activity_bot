@@ -5,7 +5,7 @@ from aiogram_dialog.widgets.media import StaticMedia
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram.types import ContentType
 
-from dialogs.states import ChildInfo, ParentRegistration
+from dialogs.states import ChildInfo, ParentRegistration, Err
 from .handlers import *
 from .getter import *
 from config import load_config
@@ -91,4 +91,16 @@ child_info_dialog=Dialog(
         getter=get_exercise_text
     )
 
+)
+
+
+
+err_window = Dialog(
+    Window(
+        Const(
+            "❌ <b>Произошла ошибка!</b>\n\n"
+            "Нажмите /start, чтобы вернуться в начало и продолжить работу 🔄"
+        ),
+        state=Err.err
+    )
 )

@@ -8,7 +8,7 @@ from aiogram_dialog.widgets.kbd import Select
 from dialogs.states import *
 from aiogram_dialog.widgets.input import MessageInput
 
-from models.methods import UserService, ChildService
+from models.methods import UserService, ChildService, ActivityLogService
 from models.models import *
 from logger import logger
 
@@ -58,14 +58,23 @@ async def child_handler(
             full_name=full_name,
             birth_date=birth_date
         )
-
-
         await dialog_manager.switch_to(AdminState.select_child_level)
 
     elif param == "delete":
         child_code = input_text
         success = await child_service.delete_by_code(child_code)
         if success:
+            log_service: ActivityLogService = dialog_manager.middleware_data["ActivityLogService"]
+            try:
+                await log_service.log(
+                    child_id=child_code,
+                    event_type=ActivityEventType.delete_child,
+                    actor_id=message.from_user.id,
+                    entity_id=child_code
+                )
+            except Exception as e:
+                logger.error(f"Не удалось залогировать удале ребенка {child_code}: {e}")
+
             await message.answer(f"✅ Ребёнок {child_code} удалён")
         else:
             await message.answer(f"❌ Ребёнок {child_code} не найден")
@@ -87,12 +96,23 @@ async def on_level_selected(
     birth_date = dialog_manager.dialog_data.get("birth_date")
 
     child_service: ChildService = dialog_manager.middleware_data["ChildService"]
+    log_service: ActivityLogService = dialog_manager.middleware_data["ActivityLogService"]
 
     child = await child_service.create(
         full_name=full_name,
         birth_date=birth_date,
         level_id=level_id
     )
+
+    try:
+        await log_service.log(
+            child_id=child.code,
+            event_type=ActivityEventType.create_child,
+            actor_id=callback.from_user.id,
+            entity_id=child.code
+        )
+    except Exception as e:
+        logger.error(f"Не удалось залогировать создание ребенка {child.code}: {e}")
 
     await callback.message.answer(f"✅ Ребёнок {child.full_name} ({child.code}) создан")
     await dialog_manager.start(AdminState.admin_menu)

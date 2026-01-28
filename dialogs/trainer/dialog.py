@@ -246,8 +246,27 @@ trainer_dialog = Dialog(
         Format("{text}"),
         DynamicMedia("photo"),
         Row(
-            Button(text=Const("◀️"), id="prev", on_click=prev_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
-            Button(text=Const("▶️"), id="next", on_click=next_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
+            Button(
+                text=Format("⬅️ {prev_month}"),
+                id="prev_month",
+                on_click=month_history,
+                when=lambda data, widget, manager: data.get("prev_month") is not None
+            ),
+            Button(
+                text=Format("📅 {current_month}"),
+                id="current_month",
+            ),
+            Button(
+                text=Format("{next_month} ➡️"),
+                id="next_month",
+                on_click=month_history,
+                when=lambda data, widget, manager: data.get("next_month") is not None
+            ),
+        ),
+
+        Row(
+            Button(text=Format("◀️ Пред. фото"), id="prev", on_click=prev_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
+            Button(text=Format("След. фото ▶️"), id="next", on_click=next_history, when=lambda data, widget, manager: data.get("text") != "Нет данных"),
         ),
         Button(
             text=Const("✏️ Добавить комментарий"),

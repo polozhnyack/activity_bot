@@ -30,6 +30,7 @@ block_manager = BlockManager()
 MAX_ATTEMPTS = 3
 BLOCK_HOURS = 24
 
+
 @router.message(CommandStart())
 async def command_start_process(
     message: Message,
